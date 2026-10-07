@@ -23,6 +23,6 @@ Do not copy DarkPixel files, assets, databases or update systems into this repos
 ## Deployment
 GitHub Pages publishes the client.
 Belmo runs only the `server/` service.
-Firebase is a dedicated database for Tekaym Online.
+Firebase Firestore is the dedicated persistent database for Tekaym Online.
 
 See `docs/game-design.md` and `docs/asset-sources.md` for the base design and asset policy.
