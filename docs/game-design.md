@@ -5,8 +5,8 @@ Survival horror 3D en primera persona para navegador. Proyecto completamente ind
 
 ## Arquitectura
 GitHub publica el cliente mediante GitHub Pages.
-Belmo ejecuta exclusivamente el backend de `server/` mediante WebSocket/HTTP.
-Firebase Firestore es la base de datos dedicada.
+Cloudflare Workers + Durable Objects ejecutan el backend multiplayer mediante WebSocket/HTTP.
+Firebase Firestore es la base de datos dedicada para cuentas y progreso persistente.
 Existe una sola versión oficial del proyecto: V1, V2, V3…
 
 ## Mundo
