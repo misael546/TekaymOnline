@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Tekaym Online · V1</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#eef3f8;background:#050608}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050608}body{touch-action:none}canvas{display:block;width:100%;height:100%}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#17202b 0,#07090d 58%,#030406 100%);z-index:50}
+.card{width:min(440px,calc(100vw - 32px));padding:28px;border:1px solid #2c3847;border-radius:18px;background:rgba(7,10,15,.96);box-shadow:0 18px 70px #000}
+.brand{font-size:28px;font-weight:900;letter-spacing:3px}.sub{margin-top:6px;color:#8795a8;font-size:12px;letter-spacing:1px}.status{margin-top:18px;color:#aab5c4;font-size:13px;line-height:1.5}
+#googleButton{margin-top:14px;display:flex;justify-content:center}.hidden{display:none!important}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:20}.top{position:absolute;top:12px;left:12px;display:grid;gap:7px;width:min(290px,calc(100vw - 24px))}
+.meter{padding:7px 9px;border:1px solid #314052;border-radius:10px;background:#03070bcc;backdrop-filter:blur(5px)}
+.meterHead{display:flex;justify-content:space-between;font-size:10px;color:#9ba7b7;font-weight:800}.track{height:8px;margin-top:5px;background:#111722;border-radius:8px;overflow:hidden}.fill{height:100%;width:100%;background:#8dd6ff}.stam{background:#d6dd7e}
+.needs{display:grid;grid-template-columns:1fr 1fr;gap:7px}.cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:900;text-shadow:0 2px 8px #000}
+.zone{position:absolute;right:12px;top:12px;padding:8px 10px;border:1px solid #314052;border-radius:10px;background:#03070bcc;font-size:11px;color:#d8e2ee}
+.version{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:6px 10px;border:1px solid #314052;border-radius:9px;background:#03070bcc;color:#d8e2ee;font-size:10px;font-weight:900;letter-spacing:1px}
+.bottom{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:8px;align-items:center}.pill{padding:8px 12px;border:1px solid #314052;border-radius:10px;background:#03070bcc;font-size:11px;color:#c6d1de}.knifeHit{pointer-events:auto;padding:12px 18px;border-color:#8ea8c3;color:#fff;background:#142435;font-weight:900}
+.hint{position:absolute;left:50%;bottom:86px;transform:translateX(-50%);padding:7px 11px;border-radius:9px;background:#0009;color:#99a7b8;font-size:10px;white-space:nowrap}
+#damageFlash{position:fixed;inset:0;background:#c9151526;opacity:0;z-index:22;pointer-events:none}
+#touch{position:fixed;inset:0;display:none;pointer-events:none;z-index:25}.stick{position:absolute;bottom:26px;width:118px;height:118px;border:1px solid #54657a;border-radius:50%;background:#0a1018aa;pointer-events:auto}.stick.left{left:22px}.stick.right{right:22px}.knob{position:absolute;left:37px;top:37px;width:44px;height:44px;border-radius:50%;background:#c8d4e2aa;border:1px solid #dbe7f3}
+.touchAction,.touchFs{position:absolute;border-radius:50%;border:1px solid #63778e;background:#142334dd;color:#fff;font-weight:900;pointer-events:auto}.touchAction{right:166px;bottom:34px;width:74px;height:74px}.touchFs{right:16px;top:154px;width:46px;height:46px;border-radius:11px}
+@media(max-width:800px){#touch{display:block}.hint{bottom:152px}.bottom{bottom:145px}.version{top:7px}.cross{font-size:16px}}
+</style>
+</head>
+<body>
+<div id="boot" class="overlay"><div class="card"><div class="brand">TEKAYM ONLINE</div><div class="sub">PRISON SURVIVAL · V1</div><div class="status" id="bootStatus">Preparando la prisión…</div></div></div>
+<div id="loginGate" class="overlay hidden"><div class="card"><div class="brand">TEKAYM ONLINE</div><div class="sub">ACCESO DE CUENTA</div><div class="status" id="loginStatus">Preparando acceso seguro…</div><div id="googleButton"></div></div></div>
+<div id="hud">
+  <div class="top">
+    <div class="meter"><div class="meterHead"><span>VIDA</span><b id="hpText">100 / 100</b></div><div class="track"><div id="hpFill" class="fill"></div></div></div>
+    <div class="meter"><div class="meterHead"><span>RESISTENCIA</span><b id="stamText">100 / 100</b></div><div class="track"><div id="stamFill" class="fill stam"></div></div></div>
+    <div class="needs"><div class="meter"><div class="meterHead"><span>HAMBRE</span><b id="hungerText">100%</b></div><div class="track"><div id="hungerFill" class="fill"></div></div></div><div class="meter"><div class="meterHead"><span>SED</span><b id="thirstText">100%</b></div><div class="track"><div id="thirstFill" class="fill"></div></div></div></div>
+  </div>
+  <div class="zone" id="zoneText">CELDA</div><div class="version">V1</div><div class="cross">+</div>
+  <div class="hint" id="hint">WASD · Mouse para mirar · Espacio para atacar · ESC libera el cursor</div>
+  <div class="bottom"><div class="pill">CUCHILLO · 20 DAÑO</div><button class="pill knifeHit" id="knifeHit" type="button">ATACAR</button></div>
+</div>
+<div id="touch"><div class="stick left" id="moveStick"><div class="knob" id="moveKnob"></div></div><div class="stick right" id="lookStick"><div class="knob" id="lookKnob"></div></div><button class="touchAction" id="touchAttack">ATAQUE</button><button class="touchFs" id="touchFs">⛶</button></div>
+<div id="damageFlash"></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
