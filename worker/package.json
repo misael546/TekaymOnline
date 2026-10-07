@@ -1,0 +1,7 @@
+{
+  "name":"tekaym-online-worker",
+  "private":true,
+  "type":"module",
+  "scripts":{"check":"wrangler types && node --check src/index.js"},
+  "devDependencies":{"wrangler":"^4.41.0"}
+}
