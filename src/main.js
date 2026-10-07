@@ -1,0 +1,128 @@
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {PointerLockControls} from 'three/addons/controls/PointerLockControls.js';
+import {GAME_VERSION,ASSETS,SERVER_URL,HTTP_SERVER_URL,WORLD} from './config.js';
+import {buildPrisonBlockout} from './prison.js';
+
+const $=id=>document.getElementById(id);
+const boot=$('boot'),bootStatus=$('bootStatus'),loginGate=$('loginGate'),loginStatus=$('loginStatus'),googleButton=$('googleButton');
+const hpText=$('hpText'),hpFill=$('hpFill'),stamText=$('stamText'),stamFill=$('stamFill'),hungerText=$('hungerText'),hungerFill=$('hungerFill'),thirstText=$('thirstText'),thirstFill=$('thirstFill'),zoneText=$('zoneText'),hint=$('hint'),damageFlash=$('damageFlash'),knifeHit=$('knifeHit');
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x050608);
+scene.fog=new THREE.Fog(0x050608,42,165);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.05,260);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;document.body.appendChild(renderer.domElement);
+const controls=new PointerLockControls(camera,renderer.domElement);scene.add(controls.object);
+scene.add(new THREE.HemisphereLight(0x9aa8b8,0x161a1e,1.5));
+const light=new THREE.DirectionalLight(0xc8d5e2,1.15);light.position.set(22,30,16);light.castShadow=true;scene.add(light);
+
+const prison=buildPrisonBlockout();scene.add(prison.group);
+const spawn=prison.cells[Math.floor(Math.random()*prison.cells.length)];
+controls.object.position.copy(spawn.spawn);zoneText.textContent='CELDA '+spawn.id;
+const loader=new GLTFLoader(),assetRoot=new THREE.Group();scene.add(assetRoot);
+const zombies=[],remotePlayers=new Map();
+const keys={w:false,a:false,s:false,d:false};
+const player={id:null,name:'Jugador',hp:100,maxHp:100,stamina:100,hunger:100,thirst:100,cooldown:0,dead:false};
+let knife=null,socket=null,googleIdToken='',lookYaw=0,lookPitch=0,last=performance.now(),lastNet=0,googleReady=false;
+
+function setBoot(text){if(bootStatus)bootStatus.textContent=text}
+function updateHud(){
+ const set=(text,fill,v,max=100)=>{text.textContent=Math.round(v)+' / '+Math.round(max);fill.style.width=Math.max(0,Math.min(100,v/max*100))+'%'};
+ set(hpText,hpFill,player.hp,player.maxHp);set(stamText,stamFill,player.stamina);hungerText.textContent=Math.round(player.hunger)+'%';hungerFill.style.width=Math.max(0,Math.min(100,player.hunger))+'%';thirstText.textContent=Math.round(player.thirst)+'%';thirstFill.style.width=Math.max(0,Math.min(100,player.thirst))+'%';
+}
+function flash(){damageFlash.style.opacity='1';setTimeout(()=>damageFlash.style.opacity='0',120)}
+function loadModel(url,scale=1){return new Promise((resolve,reject)=>loader.load(url,g=>{g.scene.scale.setScalar(scale);resolve(g.scene)},undefined,reject))}
+async function loadAssets(){
+ setBoot('Cargando prisión 3D…');
+ try{const g=await loadModel(ASSETS.prisonStarter);g.position.set(-25,-.5,-45);g.rotation.y=Math.PI;assetRoot.add(g)}catch(e){console.warn('[TEKAYM] prison asset',e)}
+ setBoot('Cargando infectados…');
+ try{const g=await loadModel(ASSETS.zombieStarter,.9);g.position.set(50,0,55);assetRoot.add(g)}catch(e){console.warn('[TEKAYM] zombie asset',e)}
+ try{const g=await loadModel(ASSETS.knife);g.scale.setScalar(.42);g.position.set(.26,-.28,-.55);g.rotation.set(-.4,.15,-.2);knife=g;camera.add(g)}catch(e){console.warn('[TEKAYM] knife asset',e);const h=new THREE.Group();const b=new THREE.Mesh(new THREE.BoxGeometry(.055,.34,.025),new THREE.MeshStandardMaterial({color:0xbfc7cf,metalness:.8,roughness:.28}));b.position.y=.12;h.add(b);const g=new THREE.Mesh(new THREE.BoxGeometry(.09,.16,.07),new THREE.MeshStandardMaterial({color:0x202327}));g.position.y=-.13;h.add(g);h.position.set(.25,-.3,-.55);knife=h;camera.add(h)}
+ spawnProceduralZombies(18);
+}
+function randomZombiePosition(){
+ for(let i=0;i<100;i++){const p=new THREE.Vector3((Math.random()*2-1)*96,0,(Math.random()*2-1)*78);let safe=true;for(const c of prison.cells){if(Math.hypot(p.x-c.center.x,p.z-c.center.z)<WORLD.zombieMinDistanceFromCells){safe=false;break}}if(safe)return p}
+ return new THREE.Vector3(0,0,0);
+}
+function spawnProceduralZombies(count){
+ for(let i=0;i<count;i++){const z=new THREE.Group();const body=new THREE.Mesh(new THREE.CapsuleGeometry(.3,.9,5,8),new THREE.MeshStandardMaterial({color:0x77706b,roughness:.9}));body.position.y=.8;z.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),new THREE.MeshStandardMaterial({color:0x8d8882,roughness:.9}));head.position.y=1.55;z.add(head);z.position.copy(randomZombiePosition());z.userData={id:'z'+i,hp:45,speed:1.05+Math.random()*.5,phase:Math.random()*6.28};scene.add(z);zombies.push(z)}
+}
+function moveLocal(dt){
+ const speed=player.stamina<15?2.1:3.8,v=new THREE.Vector3((keys.d?1:0)-(keys.a?1:0),0,(keys.s?1:0)-(keys.w?1:0));
+ if(v.lengthSq()){v.normalize();const dir=v.applyAxisAngle(new THREE.Vector3(0,1,0),camera.rotation.y);const next=controls.object.position.clone().addScaledVector(dir,speed*dt);next.y=1.65;if(Math.abs(next.x)<108&&Math.abs(next.z)<88)controls.object.position.copy(next);player.stamina=Math.max(0,player.stamina-10*dt)}else player.stamina=Math.min(100,player.stamina+22*dt);
+}
+function updateNeeds(dt){
+ player.hunger=Math.max(0,player.hunger-.18*dt);player.thirst=Math.max(0,player.thirst-.26*dt);
+ if(player.hunger===0||player.thirst===0)player.hp=Math.max(0,player.hp-.8*dt);
+ if(player.hp<=0&&!player.dead){player.dead=true;setBoot('Has muerto. Recargando…');boot.classList.remove('hidden');setTimeout(()=>location.reload(),1200)}
+}
+function attack(){
+ if(player.dead||player.cooldown>0)return;
+ player.cooldown=.55;if(knife)knife.rotation.z-=.8;
+ const origin=controls.object.position.clone(),forward=new THREE.Vector3();camera.getWorldDirection(forward);
+ let best=null,bestD=2.25;
+ for(const z of zombies){if(!z.visible||z.userData.hp<=0)continue;const to=z.position.clone().sub(origin),d=to.length();if(d>bestD)continue;to.normalize();if(forward.dot(to)<.15)continue;if(d<bestD){best=z;bestD=d}}
+ if(socket?.readyState===WebSocket.OPEN&&best)socket.send(JSON.stringify({type:'knife_attack',targetId:best.userData.id}));
+ if(best){best.userData.hp-=20;if(best.userData.hp<=0){best.visible=false;setTimeout(()=>{best.position.copy(randomZombiePosition());best.userData.hp=45;best.visible=true},4000)}}
+}
+function setKey(e,v){if(e.code==='KeyW')keys.w=v;if(e.code==='KeyA')keys.a=v;if(e.code==='KeyS')keys.s=v;if(e.code==='KeyD')keys.d=v;if(v&&e.code==='Space')attack()}
+addEventListener('keydown',e=>{if(document.activeElement?.tagName==='INPUT')return;setKey(e,true)});
+addEventListener('keyup',e=>setKey(e,false));
+knifeHit.addEventListener('click',attack);
+renderer.domElement.addEventListener('click',()=>{if(innerWidth>800&&!controls.isLocked)controls.lock()});
+
+function showLogin(text){loginGate.classList.remove('hidden');loginStatus.textContent=text}
+async function initGoogle(){
+ if(googleReady)return;
+ try{
+  const response=await fetch(HTTP_SERVER_URL+'/auth/google/config?cfg='+Date.now(),{cache:'no-store'});const cfg=await response.json();
+  if(!cfg.ok||!cfg.clientId){showLogin('Google todavía no está configurado en Belmo.');return}
+  const wait=()=>new Promise(resolve=>{if(window.google?.accounts?.id)return resolve();let n=0;const t=setInterval(()=>{if(window.google?.accounts?.id||++n>100){clearInterval(t);resolve()}},50)});
+  await wait();if(!window.google?.accounts?.id){showLogin('No se pudo cargar el acceso de Google.');return}
+  window.google.accounts.id.initialize({client_id:cfg.clientId,callback:onGoogleCredential,auto_select:false,cancel_on_tap_outside:true});
+  googleButton.innerHTML='';window.google.accounts.id.renderButton(googleButton,{theme:'outline',size:'large',text:'signin_with'});
+  googleReady=true;loginStatus.textContent='Inicia sesión con Google para entrar.';
+ }catch(e){console.error('[TEKAYM GOOGLE]',e);showLogin('No se pudo conectar con la configuración de cuenta.')}
+}
+async function onGoogleCredential(response){
+ googleIdToken=String(response?.credential||'');if(!googleIdToken)return;
+ loginStatus.textContent='Verificando cuenta…';await startSocket(true);
+}
+function startSocket(fromLogin=false){
+ const url=SERVER_URL;
+ if(url.includes('YOUR-TEKAYM-BELMO')){loginGate.classList.remove('hidden');loginStatus.textContent='Belmo todavía no está conectado a este proyecto.';boot.classList.add('hidden');hint.textContent='Configura SERVER_URL en src/config.js para activar el multiplayer.';return}
+ try{
+  socket=new WebSocket(url);
+  socket.addEventListener('open',()=>{socket.send(JSON.stringify({type:'join',version:GAME_VERSION,googleIdToken}))});
+  socket.addEventListener('message',e=>{const m=JSON.parse(e.data);if(m.type==='connected'){player.id=m.id}else if(m.type==='joined'){player.name=m.player.name||player.name;loginGate.classList.add('hidden');boot.classList.add('hidden')}else if(m.type==='auth_error'){showLogin(m.message||'Cuenta no válida.')}else if(m.type==='player_damage'){player.hp=Math.max(0,Number(m.hp)||0);flash()}else if(m.type==='state'){applyState(m)}else if(m.type==='chat'){console.log('[CHAT]',m.from,m.text)}});
+  socket.addEventListener('close',()=>{if(!player.dead&&fromLogin)showLogin('Conexión cerrada. Reintentando…')});
+ }catch(e){console.error('[TEKAYM WS]',e);showLogin('No se pudo conectar con Belmo.')}
+}
+function applyState(m){
+ for(const p of m.players||[]){
+  if(p.id===player.id){player.hp=Number(p.hp)||player.hp;continue}
+  let obj=remotePlayers.get(p.id);
+  if(!obj){obj=new THREE.Mesh(new THREE.CapsuleGeometry(.3,.9,5,8),new THREE.MeshStandardMaterial({color:0x6bb7ff,roughness:.9}));scene.add(obj);remotePlayers.set(p.id,obj)}
+  obj.position.set(Number(p.x)||0,1.0,Number(p.z)||0);
+ }
+}
+function sendMove(now){if(socket?.readyState===WebSocket.OPEN&&now-lastNet>100){lastNet=now;socket.send(JSON.stringify({type:'move',x:controls.object.position.x,z:controls.object.position.z}))}}
+function installTouch(){
+ const move=$('moveStick'),mk=$('moveKnob'),look=$('lookStick'),lk=$('lookKnob');let mi=null,li=null;
+ const point=(stick,knob,e)=>{const r=stick.getBoundingClientRect(),cx=r.width/2,cy=r.height/2;let x=e.clientX-r.left-cx,y=e.clientY-r.top-cy;const n=Math.hypot(x,y);if(n>38){x=x/n*38;y=y/n*38}knob.style.transform='translate('+x+'px,'+y+'px)';return{x:x/38,y:y/38}};
+ move.addEventListener('pointerdown',e=>{mi=e.pointerId;move.setPointerCapture(mi);point(move,mk,e)});
+ move.addEventListener('pointermove',e=>{if(e.pointerId!==mi)return;const v=point(move,mk,e);keys.a=v.x<-.2;keys.d=v.x>.2;keys.w=v.y<-.2;keys.s=v.y>.2});
+ move.addEventListener('pointerup',()=>{mi=null;mk.style.transform='translate(0,0)';keys.w=keys.a=keys.s=keys.d=false});
+ look.addEventListener('pointerdown',e=>{li=e.pointerId;look.setPointerCapture(li)});
+ look.addEventListener('pointermove',e=>{if(e.pointerId!==li)return;const v=point(look,lk,e);lookYaw-=v.x*.035;lookPitch=Math.max(-1.2,Math.min(1.2,lookPitch-v.y*.025));camera.rotation.order='YXZ';camera.rotation.y=lookYaw;camera.rotation.x=lookPitch});
+ look.addEventListener('pointerup',()=>{li=null;lk.style.transform='translate(0,0)'});
+ $('touchAttack').addEventListener('click',attack);$('touchFs').addEventListener('click',()=>document.documentElement.requestFullscreen?.());
+}
+installTouch();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+async function bootGame(){setBoot('Cargando Tekaym Online V1…');await loadAssets();await initGoogle();boot.classList.add('hidden');showLogin('Inicia sesión con Google para comenzar.')};
+bootGame().catch(e=>{console.error('[TEKAYM BOOT]',e);setBoot('Error recuperable del prototipo.');setTimeout(()=>boot.classList.add('hidden'),700);initGoogle()});
+function animate(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!player.dead){moveLocal(dt);updateNeeds(dt);player.cooldown=Math.max(0,player.cooldown-dt);if(knife)knife.rotation.z=Math.min(-.2,knife.rotation.z+.08);for(const z of zombies){if(!z.visible)continue;const to=controls.object.position.clone().sub(z.position);to.y=0;const d=to.length();if(d<14&&d>1.3){to.normalize();z.position.addScaledVector(to,z.userData.speed*dt);z.rotation.y=Math.atan2(to.x,to.z)} }sendMove(now);updateHud()}renderer.render(scene,camera);requestAnimationFrame(animate)}
+updateHud();requestAnimationFrame(animate);
