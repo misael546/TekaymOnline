@@ -1,0 +1,8 @@
+{
+  "game": "Tekaym Online",
+  "version": "V1",
+  "releaseId": "V1",
+  "clientVersion": "V1",
+  "databaseSchema": 1,
+  "clientPath": "/index.html"
+}
