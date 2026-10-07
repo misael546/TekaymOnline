@@ -1,0 +1,26 @@
+{
+  "licensePolicy": "Only use assets whose page explicitly states CC0 1.0 or another compatible license. Never copy DarkPixel assets.",
+  "sources": [
+    {
+      "id": "prison-complex-builder",
+      "type": "environment-pack",
+      "license": "CC0-1.0",
+      "page": "https://3dassets.dev/packs/prison-complex-builder",
+      "starterScene": "https://cdn.3dassets.dev/assets/25718/v1/model.glb"
+    },
+    {
+      "id": "zombie-horde-and-infected-variants",
+      "type": "zombie-pack",
+      "license": "CC0-1.0",
+      "page": "https://3dassets.dev/packs/undead-horde-and-infected-variants",
+      "starterScene": "https://cdn.3dassets.dev/assets/12020/v1/model.glb"
+    },
+    {
+      "id": "kitchen-knife",
+      "type": "weapon",
+      "license": "CC0-1.0",
+      "page": "https://3dassets.dev/assets/halloween-slasher-street-kitchen-knife-6d0ebd70",
+      "model": "https://cdn.3dassets.dev/assets/27319/v1/model.glb"
+    }
+  ]
+}
