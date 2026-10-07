@@ -78,7 +78,7 @@ async function initGoogle(){
  if(googleReady)return;
  try{
   const response=await fetch(HTTP_SERVER_URL+'/auth/google/config?cfg='+Date.now(),{cache:'no-store'});const cfg=await response.json();
-  if(!cfg.ok||!cfg.clientId){showLogin('Google todavía no está configurado en Belmo.');return}
+  if(!cfg.ok||!cfg.clientId){showLogin('Google todavía no está configurado en el servidor.');return}
   const wait=()=>new Promise(resolve=>{if(window.google?.accounts?.id)return resolve();let n=0;const t=setInterval(()=>{if(window.google?.accounts?.id||++n>100){clearInterval(t);resolve()}},50)});
   await wait();if(!window.google?.accounts?.id){showLogin('No se pudo cargar el acceso de Google.');return}
   window.google.accounts.id.initialize({client_id:cfg.clientId,callback:onGoogleCredential,auto_select:false,cancel_on_tap_outside:true});
@@ -92,13 +92,13 @@ async function onGoogleCredential(response){
 }
 function startSocket(fromLogin=false){
  const url=SERVER_URL;
- if(url.includes('YOUR-TEKAYM-BELMO')){loginGate.classList.remove('hidden');loginStatus.textContent='Belmo todavía no está conectado a este proyecto.';boot.classList.add('hidden');hint.textContent='Configura SERVER_URL en src/config.js para activar el multiplayer.';return}
+ if(url.includes('YOUR-TEKAYM-BELMO')){loginGate.classList.remove('hidden');loginStatus.textContent='El servidor todavía no está conectado a este proyecto.';boot.classList.add('hidden');hint.textContent='Configura SERVER_URL en src/config.js para activar el multiplayer.';return}
  try{
   socket=new WebSocket(url);
   socket.addEventListener('open',()=>{socket.send(JSON.stringify({type:'join',version:GAME_VERSION,googleIdToken}))});
   socket.addEventListener('message',e=>{const m=JSON.parse(e.data);if(m.type==='connected'){player.id=m.id}else if(m.type==='joined'){player.name=m.player.name||player.name;loginGate.classList.add('hidden');boot.classList.add('hidden')}else if(m.type==='auth_error'){showLogin(m.message||'Cuenta no válida.')}else if(m.type==='player_damage'){player.hp=Math.max(0,Number(m.hp)||0);flash()}else if(m.type==='state'){applyState(m)}else if(m.type==='chat'){console.log('[CHAT]',m.from,m.text)}});
   socket.addEventListener('close',()=>{if(!player.dead&&fromLogin)showLogin('Conexión cerrada. Reintentando…')});
- }catch(e){console.error('[TEKAYM WS]',e);showLogin('No se pudo conectar con Belmo.')}
+ }catch(e){console.error('[TEKAYM WS]',e);showLogin('No se pudo conectar con el servidor.')}
 }
 function applyState(m){
  for(const p of m.players||[]){
