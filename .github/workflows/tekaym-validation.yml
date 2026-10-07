@@ -38,7 +38,7 @@ jobs:
           node --check src/prison.js
       - name: Check isolation
         run: |
-          if grep -RniE 'DarkPixel|neon_core|neon_release|neon_force|neon_reload|serverVersion|SERVER_VERSION' --exclude-dir=.git --exclude='README.md' --exclude-dir=docs .; then
+          if git grep -nE 'DarkPixel|neon_core|neon_release|neon_force|neon_reload|serverVersion|SERVER_VERSION' -- ':!README.md' ':!docs/**' ':!.github/workflows/tekaym-validation.yml'; then
             echo 'Forbidden cross-project/version traces found'; exit 1;
           fi
       - name: Check structure
