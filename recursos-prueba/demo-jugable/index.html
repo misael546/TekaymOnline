@@ -109,19 +109,21 @@ const M={
  steel:mat('#abb8b5',.4,.75),grass:mat('#596149'),white:mat('#b8bfaf')
 };
 const world=new THREE.Group();scene.add(world);
-// Modelo humanoide externo de Quaternius Zombie Apocalypse Kit (CC0 1.0).
-// Se carga como GLB riggeado; el fallback procedural solo se usa si falla la red.
-const ZOMBIE_MODEL_URL='https://raw.githubusercontent.com/mars-tw/storm-apocalypse/0fcf0a80297a03a7b8da63eb4a2be33138a8d58c/public/models/zombie.glb';
+// Tres modelos humanoides originales riggeados + un jefe, con licencia MIT registrada en ASSET_CREDITS.md.
+const ZOMBIE_MODEL_URLS={
+ ash:'https://raw.githubusercontent.com/mars-tw/storm-apocalypse/0fcf0a80297a03a7b8da63eb4a2be33138a8d58c/public/models/custom/zombies/zombie-ash.glb',
+ frost:'https://raw.githubusercontent.com/mars-tw/storm-apocalypse/0fcf0a80297a03a7b8da63eb4a2be33138a8d58c/public/models/custom/zombies/zombie-frost.glb',
+ rust:'https://raw.githubusercontent.com/mars-tw/storm-apocalypse/0fcf0a80297a03a7b8da63eb4a2be33138a8d58c/public/models/custom/zombies/zombie-rust.glb',
+ boss:'https://raw.githubusercontent.com/mars-tw/storm-apocalypse/0fcf0a80297a03a7b8da63eb4a2be33138a8d58c/public/models/custom/boss-zombie.glb'
+};
 const zombieAssetLoader=new GLTFLoader();
-let zombieAsset=null,zombieAssetReady=false,zombieAssetFailed=false;
+const zombieAssets={};
+let zombieAssetReady=false,zombieAssetFailed=false;
 function loadZombieAsset(){
- zombieAssetLoader.load(ZOMBIE_MODEL_URL,gltf=>{
-  zombieAsset=gltf;zombieAssetReady=true;
-  console.info('[Tekaym] Modelo GLB de infectado cargado:',gltf.animations.map(a=>a.name));
- },error=>{
-  zombieAssetFailed=true;zombieAssetReady=true;
-  console.warn('[Tekaym] No se pudo cargar el GLB; se activa el modo de compatibilidad.',error);
- });
+ const entries=Object.entries(ZOMBIE_MODEL_URLS);
+ Promise.all(entries.map(([key,url])=>new Promise(resolve=>{
+  zombieAssetLoader.load(url,gltf=>{zombieAssets[key]=gltf;console.info('[Tekaym] GLB '+key+' cargado:',gltf.animations.map(a=>a.name));resolve(true);},undefined,error=>{zombieAssetFailed=true;console.warn('[Tekaym] Falló el GLB '+key,error);resolve(false);});
+ }))).then(results=>{zombieAssetReady=true;console.info('[Tekaym] Modelos GLB disponibles:',Object.keys(zombieAssets));});
 }
 function zombieAnimationMap(mixer,clips){
  const actions={};
@@ -149,14 +151,15 @@ function setZombieAnimation(z,state){
  action.fadeIn(.12).play();z.currentAction=action;z.animationState=state;
 }
 function externalZombieMesh(type){
- const root=new THREE.Group(),model=cloneSkeleton(zombieAsset.scene);
+ const key=type==='boss'?'boss':type==='brute'?'rust':type==='runner'?'frost':'ash';
+ const asset=zombieAssets[key];if(!asset)return null;
+ const root=new THREE.Group(),model=cloneSkeleton(asset.scene);
  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
- const desiredHeight=type==='boss'?2.55:type==='brute'?2.25:type==='runner'?1.78:1.92;
+ const desiredHeight=type==='boss'?2.75:type==='brute'?2.28:type==='runner'?1.82:1.9;
  const scale=desiredHeight/Math.max(.001,size.y);
- const shape=type==='runner'?[.83,.98,.86]:type==='brute'?[1.2,1.05,1.15]:type==='boss'?[1.34,1.13,1.28]:[1,1,1];
+ const shape=type==='runner'?[.86,.99,.9]:type==='brute'?[1.16,1.05,1.13]:type==='boss'?[1.08,1.04,1.08]:[1,1,1];
  model.scale.set(scale*shape[0],scale*shape[1],scale*shape[2]);
  model.position.y=-bounds.min.y*scale*shape[1];
- const tint=type==='boss'?'#77745c':type==='brute'?'#9a9b75':type==='runner'?'#b4aa8b':type==='doctor'?'#b4c0a9':type==='guard'?'#8b9b7c':'#ffffff';
  model.traverse(o=>{
   if(!o.isMesh)return;
   o.castShadow=true;o.receiveShadow=true;
@@ -164,15 +167,15 @@ function externalZombieMesh(type){
   else if(o.material)o.material=o.material.clone();
   for(const m of (Array.isArray(o.material)?o.material:[o.material])){
    if(!m)continue;
-   if(m.color)m.color.multiply(new THREE.Color(tint));
-   if('roughness' in m)m.roughness=Math.max(.68,m.roughness||.68);
+   if(m.color)m.color.multiply(new THREE.Color(type==='doctor'?'#b7c1ac':type==='guard'?'#a7b19b':'#ffffff'));
+   if('roughness' in m)m.roughness=Math.max(.7,m.roughness||.7);
    if('metalness' in m)m.metalness=0;
   }
  });
  root.add(model);root.userData.externalZombie=true;root.userData.parts=null;
  root.userData.mixer=new THREE.AnimationMixer(model);
- root.userData.actions=zombieAnimationMap(root.userData.mixer,zombieAsset.animations||[]);
- root.userData.model=model;
+ root.userData.actions=zombieAnimationMap(root.userData.mixer,asset.animations||[]);
+ root.userData.model=model;root.userData.assetKey=key;
  return root;
 }
 const colliders=[],zombies=[],loot=[],doors=[],flickerLights=[],cellGates=[];
@@ -382,7 +385,7 @@ function limb(parent,len,width,material){
  const g=new THREE.Group();parent.add(g);cube(g,width,len,width,material,0,-len/2,0);sph(g,width*.53,material,0,-len,0,7);return g;
 }
 function actorMesh(type,isZombie=false){
- if(isZombie&&zombieAsset)return externalZombieMesh(type);
+ if(isZombie){const imported=externalZombieMesh(type);if(imported)return imported;}
  const root=new THREE.Group();const spec=type;
  let skin='#ba8d6b',shirt='#4c6248',pants='#3a4540',hair='#332c24';
  if(type==='civil'){skin='#c19273';shirt='#566b76';pants='#464a4b';hair='#473328';}
