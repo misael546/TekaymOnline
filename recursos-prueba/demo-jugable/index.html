@@ -120,7 +120,7 @@ let actor=null,parts=null,cameraYaw=0,cameraPitch=.03,attackTimer=0,attackCooldo
 let openingSequence=0,roundHasStarted=false,stepTimer=0,ambientAudio=null,audioMaster=null,audioReady=false;
 const keys={};let joyX=0,joyY=0,lookPointer=null,lastPX=0,lastPY=0,lookStartX=0,lookStartY=0,runningTouch=false;
 const player={x:0,z:40,yaw:0,hp:100,stamina:100,hunger:100,thirst:100,dead:false,supplies:0,time:0};
-const zoneInfo={cells:{name:'Bloque de celdas',spawns:[[-16,12],[-16,27],[-16,42],[16,12],[16,27],[16,42],[0,16],[0,32]]},cafeteria:{name:'Cafetería',spawns:[[-16,-22],[16,-22],[-14,-3],[14,-3],[0,-18],[0,0]]},infirmary:{name:'Enfermería y duchas',spawns:[[29,-18],[49,-18],[29,12],[49,12],[40,-2]]},workshop:{name:'Taller y armería',spawns:[[-29,-18],[-49,-18],[-29,12],[-49,12],[-40,-2]]}};
+const zoneInfo={cells:{name:'Bloque de celdas',spawns:[[-13,11],[-13,20],[-13,29],[-13,38],[-13,46],[13,11],[13,20],[13,29],[13,38],[13,46],[0,16],[0,32]]},cafeteria:{name:'Cafetería',spawns:[[-16,-22],[16,-22],[-14,-3],[14,-3],[0,-18],[0,0]]},infirmary:{name:'Enfermería y duchas',spawns:[[29,-18],[49,-18],[29,12],[49,12],[40,-2]]},workshop:{name:'Taller y armería',spawns:[[-29,-18],[-49,-18],[-29,12],[-49,12],[-40,-2]]}};
 const zoneLinks=[['cells','cafeteria'],['cafeteria','infirmary'],['cafeteria','workshop']];
 function cube(parent,w,h,d,material,x,y,z,cast=true){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=cast;o.receiveShadow=true;parent.add(o);return o;}
 function cyl(parent,rt,rb,h,material,x,y,z,n=8){const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,n),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
@@ -216,8 +216,9 @@ function createWorld(){
  cube(world,2.7,.32,41.5,M.concrete,-8.45,4.15,27,false);cube(world,2.7,.32,41.5,M.concrete,8.45,4.15,27,false);
  for(const side of [-1,1])for(const z of [11,20,29,38,46]){makeCell(side*13,z,0,side);makeCell(side*13,z,1,side);}
  for(const side of [-1,1]){cube(world,.16,1.05,41,M.bars,side*9.4,4.8,27);for(let z=7;z<=47;z+=1.25)cube(world,.045,1,.045,M.metal,side*9.4,4.8,z);}
+ cube(world,39.2,.18,43.2,M.concrete,0,8.78,27,false);cube(world,43.4,.18,33.5,M.concrete,0,5.72,-11,false);cube(world,35.4,.18,43.4,M.concrete,40,5.72,-3,false);cube(world,35.4,.18,43.4,M.concrete,-40,5.72,-3,false);
  for(const z of [10,21,32,43]){cube(world,1.8,.12,.22,M.light,-4.5,7.9,z,false);cube(world,1.8,.12,.22,M.light,4.5,7.9,z,false);}
- for(let i=0;i<16;i++)cube(world,2.8,.18,.75,M.concrete,6.8+i*.18,.18+i*.27,21+i*.32);
+ for(let i=0;i<16;i++){const sx=6.8+i*.18,sy=.18+i*.27,sz=21+i*.32;cube(world,2.8,.18,.75,M.concrete,sx,sy,sz);colliders.push({x:sx,z:sz,hx:1.4,hz:.38,rot:0});}
  // Cafetería cerrada con acceso de pago, mesas largas y cocina al fondo.
  addWall(-22,-11,.55,34,5.8,M.wall);addWall(22,-20,.55,18,5.8,M.wall);addWall(22,2,.55,10,5.8,M.wall);
  addWall(-22,-20,.55,18,5.8,M.wall);addWall(-22,2,.55,10,5.8,M.wall);addWall(0,-28,44,.55,5.8,M.wall);
@@ -337,9 +338,10 @@ function accessibleZones(){
 }
 function spawnOneZombie(zone){
  const choices=zoneInfo[zone].spawns,spawn=choices[Math.floor(Math.random()*choices.length)],r=Math.random();
- const type=r<.17?'runner':r<.28?'brute':r<.38?'guard':r<.48?'doctor':'prisoner';
+ const type=round>=7&&r<Math.min(.12,.025+(round-7)*.006)?'boss':r<Math.min(.42,.17+(round-1)*.012)?'runner':r<Math.min(.62,.28+(round-1)*.018)?'brute':r<.75?'guard':r<.86?'doctor':'prisoner';
  const mesh=actorMesh(type,true);mesh.position.set(spawn[0],0,spawn[1]);world.add(mesh);const roundScale=1+Math.max(0,round-1)*.16;if(round>=4&&Math.random()<Math.min(.35,(round-2)*.025))mesh.scale.setScalar(1.08+Math.min(.12,round*.004));
- const z={mesh,parts:mesh.userData.parts,x:spawn[0],z:spawn[1],type,hp:Math.round((type==='brute'?82:type==='runner'?38:52)*roundScale),speedScale:1+Math.min(.45,(round-1)*.025),attackCd:.4+Math.random(),phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:Math.random()<.5?-1:1,hitTimer:0,hitSide:1,facingYaw:Math.atan2(player.x-spawn[0],player.z-spawn[1]),id:performance.now()+Math.random(),zone,attackAnim:0,groanTimer:3+Math.random()*5};
+ if(round>=3){const torso=mesh.userData.parts.torso;const mutation=mat(round>=7?'#373b32':'#4a493c');const bone=mat('#b1aa8b');for(const s of [-1,1]){sph(torso,.055,mat('#e6a54f',.3),s*.082,.59,.232,7);if(round>=4)cyl(torso,.075,.025,.28,bone,s*.31,.25,.03,6);}if(round>=5){cube(torso,.15,.32,.08,mutation,-.24,-.12,.16);cube(torso,.12,.22,.07,mutation,.25,.08,.17);}if(round>=7){for(let k=0;k<3;k++)cyl(torso,.11,.025,.36,bone,-.2+k*.2,.38,-.08,5);sph(torso,.12,mat('#4b1715',.85),-.12,.18,.18,7);}}
+ const z={mesh,parts:mesh.userData.parts,x:spawn[0],z:spawn[1],type,hp:Math.round((type==='boss'?260:type==='brute'?82:type==='runner'?38:52)*roundScale),speedScale:type==='boss'?Math.max(.8,1+Math.min(.45,(round-1)*.025)-.25):1+Math.min(.45,(round-1)*.025),attackCd:.4+Math.random(),phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:Math.random()<.5?-1:1,hitTimer:0,hitSide:1,facingYaw:Math.atan2(player.x-spawn[0],player.z-spawn[1]),id:performance.now()+Math.random(),zone,attackAnim:0,groanTimer:3+Math.random()*5};
  mesh.rotation.y=z.facingYaw;zombies.push(z);
 }
 function beginRound(n){round=n;roundKills=0;waveToSpawn=Math.min(42,5+n*2);spawnClock=.65;intermission=0;roundHasStarted=true;playSfx('round');message('RONDA '+round+' · '+waveToSpawn+' infectados',3000);updateHud();}
@@ -480,7 +482,7 @@ function updateZombies(dt,t){
    if(!collide(z.x,nz,.36))z.z=nz;
    z.mesh.position.x=z.x;z.mesh.position.z=z.z;z.zone=currentZone(z.x,z.z);const targetYaw=Math.atan2(dx,dz),yawDelta=Math.atan2(Math.sin(targetYaw-z.mesh.rotation.y),Math.cos(targetYaw-z.mesh.rotation.y));z.mesh.rotation.y+=yawDelta*(1-Math.exp(-9*dt));z.facingYaw=z.mesh.rotation.y;
   }else if(fromZone===playerZone&&d<=1.4&&z.attackCd<=0){
-   z.attackCd=1.3;z.attackAnim=.34;player.hp=Math.max(0,player.hp-(z.type==='brute'?14:8));flashTime=.22;playerHitTimer=.28;
+   z.attackCd=1.3;z.attackAnim=.34;player.hp=Math.max(0,player.hp-(z.type==='boss'?22:z.type==='brute'?14:8));flashTime=.22;playerHitTimer=.28;
    message(z.type==='brute'?'¡El bruto te golpeó!':'¡Un infectado te golpeó!',700);updateHud();
    if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
   }
