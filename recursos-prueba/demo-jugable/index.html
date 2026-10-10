@@ -117,7 +117,7 @@ const M={
 const world=new THREE.Group();scene.add(world);
 const colliders=[],zombies=[],loot=[];
 let running=false,ended=false,paused=false,killCount=0,lastTime=performance.now(),messageUntil=0;
-let actor=null,parts=null,cameraYaw=0,cameraPitch=.23,cameraDist=5.7,cameraMode='third',attackTimer=0,attackCooldown=0,flashTime=0;
+let actor=null,parts=null,cameraYaw=0,cameraPitch=.23,cameraDist=5.7,cameraMode='third',attackTimer=0,attackCooldown=0,flashTime=0,playerHitTimer=0;
 const keys={};let joyX=0,joyY=0,lookPointer=null,lastPX=0,lastPY=0,lookStartX=0,lookStartY=0,runningTouch=false;
 const player={x:0,z:43,yaw:0,hp:100,stamina:100,hunger:100,thirst:100,dead:false,supplies:0,time:0};
 const reqKills=8,goal={kills:0};
@@ -294,14 +294,14 @@ function spawnZombies(){
   [-11,9,'scientist'],[12,12,'doctor'],[-22,25,'runner'],[22,25,'brute'],
   [-47,10,'prisoner'],[47,16,'guard'],[-13,42,'prisoner'],[14,42,'runner']
  ];
- list.forEach((v,i)=>{const mesh=actorMesh(v[2],true);mesh.position.set(v[0],0,v[1]);world.add(mesh);zombies.push({mesh,parts:mesh.userData.parts,x:v[0],z:v[1],type:v[2],hp:v[2]==='brute'?65:v[2]==='runner'?30:40,attackCd:Math.random()*.6,phase:Math.random()*6.28,alive:true,id:i});});
+ list.forEach((v,i)=>{const mesh=actorMesh(v[2],true);mesh.position.set(v[0],0,v[1]);world.add(mesh);zombies.push({mesh,parts:mesh.userData.parts,x:v[0],z:v[1],type:v[2],hp:v[2]==='brute'?65:v[2]==='runner'?30:40,attackCd:Math.random()*.6,phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:1,hitTimer:0,hitSide:1,facingYaw:0,id:i});});
 }
 function makePlayer(){actor=actorMesh('soldier',false);parts=actor.userData.parts;actor.position.set(player.x,0,player.z);world.add(actor);}
 function resetGame(){
  zombies.forEach(z=>{world.remove(z.mesh);disposeGroup(z.mesh);});zombies.length=0;
  for(let i=loot.length-1;i>=0;i--){const l=loot[i];if(l.drop){world.remove(l.mesh);disposeGroup(l.mesh);loot.splice(i,1);}else{l.available=true;l.mesh.visible=true;}}
  if(actor){world.remove(actor);disposeGroup(actor);}player.x=0;player.z=43;player.yaw=0;player.hp=100;player.stamina=100;player.hunger=100;player.thirst=100;player.dead=false;player.supplies=0;player.time=0;
- killCount=0;goal.kills=0;attackTimer=0;attackCooldown=0;runningTouch=false;paused=false;ended=false;cameraYaw=0;cameraPitch=.22;cameraDist=5.7;cameraMode='third';document.getElementById('cameraToggle').textContent='VISTA: TERCERA';viewWeapon.visible=false;
+ killCount=0;goal.kills=0;attackTimer=0;attackCooldown=0;playerHitTimer=0;runningTouch=false;paused=false;ended=false;cameraYaw=0;cameraPitch=.22;cameraDist=5.7;cameraMode='third';document.getElementById('cameraToggle').textContent='VISTA: TERCERA';viewWeapon.visible=false;
  makePlayer();spawnZombies();updateHud();document.getElementById('ending').style.display='none';document.getElementById('start').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('controls').style.display='block';running=true;message('Encuentra suministros y elimina 8 zombis para escapar.',3200);
 }
 function message(txt,ms=1800){const e=document.getElementById('message');e.textContent=txt;e.style.opacity='1';messageUntil=performance.now()+ms;}
@@ -328,10 +328,10 @@ function attack(){
   if(dist>2.55||dist<.001)continue;
   const dot=(dx/dist)*fx+(dz/dist)*fz;
   if(dot<.3)continue;
-  z.hp-=z.type==='brute'?23:34;hitCount++;
+  z.hp-=z.type==='brute'?23:34;hitCount++;z.hitTimer=.22;z.hitSide=Math.sign(dx)||1;
   z.mesh.position.x+=dx/dist*.25;z.mesh.position.z+=dz/dist*.25;
   if(z.hp<=0){
-   z.alive=false;world.remove(z.mesh);killCount++;goal.kills=killCount;
+   z.alive=false;z.dying=true;z.deathTimer=0;z.deathSide=(Math.sign(dx)||1)*.8;killCount++;goal.kills=killCount;
    if(Math.random()<.62){
     const g=new THREE.Group();g.position.set(z.x,0,z.z);world.add(g);
     cube(g,.5,.3,.5,M.crate,0,.18,0);cube(g,.56,.07,.54,M.wood,0,.35,0);
@@ -390,6 +390,20 @@ function updatePlayer(dt,t){
 function updateZombies(dt,t){
  if(!running||paused||ended)return;
  for(const z of zombies){
+  const p=z.parts;
+  if(z.dying){
+   z.deathTimer+=dt;
+   const u=Math.max(0,Math.min(1,z.deathTimer/1.05)),fall=u*u*(3-2*u);
+   resetPose(p);
+   p.torso.rotation.x=.28*fall;p.shoulderL.rotation.x=.72*fall;p.shoulderR.rotation.x=.84*fall;
+   p.shoulderL.rotation.z=-.22*fall;p.shoulderR.rotation.z=.28*fall;
+   p.hipL.rotation.x=.46*fall;p.hipR.rotation.x=.58*fall;
+   p.lowerL.rotation.x=.30*fall;p.lowerR.rotation.x=.38*fall;
+   z.mesh.rotation.z=z.deathSide*1.28*fall;
+   z.mesh.position.y=.01-.12*fall;
+   if(z.deathTimer>=1.05){world.remove(z.mesh);disposeGroup(z.mesh);z.dying=false;z.removed=true;}
+   continue;
+  }
   if(!z.alive)continue;
   const dx=player.x-z.x,dz=player.z-z.z,d=Math.hypot(dx,dz)||1;z.attackCd-=dt;z.phase+=dt*(z.type==='runner'?10:4.5);
   if(d<30&&d>1.12){
@@ -397,15 +411,14 @@ function updateZombies(dt,t){
    const nx=z.x+dx/d*spd*dt,nz=z.z+dz/d*spd*dt;
    if(!collide(nx,z.z,.36))z.x=nx;
    if(!collide(z.x,nz,.36))z.z=nz;
-   z.mesh.position.set(z.x,Math.abs(Math.sin(z.phase*2))*.04,z.z);z.mesh.rotation.y=Math.atan2(dx,-dz)+Math.PI;
+   z.mesh.position.x=z.x;z.mesh.position.z=z.z;z.mesh.rotation.y=Math.atan2(dx,-dz)+Math.PI;z.facingYaw=z.mesh.rotation.y;
   }else if(d<=1.4&&z.attackCd<=0){
-   z.attackCd=1.3;player.hp=Math.max(0,player.hp-(z.type==='brute'?14:8));flashTime=.22;
+   z.attackCd=1.3;player.hp=Math.max(0,player.hp-(z.type==='brute'?14:8));flashTime=.22;playerHitTimer=.28;
    message(z.type==='brute'?'¡El bruto te golpeó!':'¡Un infectado te golpeó!',700);updateHud();
    if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
   }
-  const p=z.parts;resetPose(p);
-  const sw=Math.sin(z.phase),counter=Math.sin(z.phase+Math.PI);
-  const walking=d<30;
+  const sw=Math.sin(z.phase),counter=Math.sin(z.phase+Math.PI),walking=d<30;
+  resetPose(p);
   if(walking){
    p.legL.rotation.x=sw*(z.type==='runner'?.95:.63);p.legR.rotation.x=counter*(z.type==='runner'?.95:.63);
    p.lowerL.rotation.x=Math.max(0,-sw)*.68;p.lowerR.rotation.x=Math.max(0,-counter)*.68;
@@ -421,6 +434,11 @@ function updateZombies(dt,t){
   }
   if(z.type==='runner'){p.torso.rotation.x+=.12;p.armL.rotation.x-=.3;p.armR.rotation.x-=.3;}
   if(z.type==='brute'){p.armL.rotation.x=-.72+sw*.09;p.armR.rotation.x=-.72+counter*.09;p.torso.rotation.x+=.04;}
+  if(z.hitTimer>0){
+   z.hitTimer=Math.max(0,z.hitTimer-dt);const impact=z.hitTimer/.22;
+   p.torso.rotation.x-=.24*impact;p.torso.rotation.z+=(z.hitSide||1)*.17*impact;
+   p.armL.rotation.x-=.48*impact;p.armR.rotation.x-=.52*impact;
+  }
  }
 }
 function updateCamera(dt){
@@ -483,11 +501,12 @@ function frame(now){
     if(parts.backpack)parts.backpack.rotation.x=Math.sin(now*.0013)*.012;
    }
    if(attackTimer>0){
-    const phase=1-attackTimer/.42;
-    const strike=Math.sin(Math.min(1,phase/.72)*Math.PI);
-    parts.armR.rotation.x=-1.15*strike;
-    parts.foreR.rotation.x=-.35-0.5*strike;
-    parts.torso.rotation.x-=.12*strike;
+    const phase=1-attackTimer/.42,strike=Math.sin(Math.min(1,phase/.72)*Math.PI);
+    parts.armR.rotation.x=-1.15*strike;parts.foreR.rotation.x=-.35-.5*strike;parts.torso.rotation.x-=.12*strike;
+   }
+   if(playerHitTimer>0){
+    const impact=playerHitTimer/.28;parts.torso.rotation.x-=.23*impact;parts.torso.rotation.z+=.11*impact;
+    parts.armL.rotation.x=.28*impact;parts.armR.rotation.x=.4*impact;playerHitTimer=Math.max(0,playerHitTimer-dt);
    }
   }
   updateCamera(dt);
