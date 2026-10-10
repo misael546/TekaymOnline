@@ -16,7 +16,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 #objective{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:min(400px,calc(100vw - 340px));padding:10px 14px;text-align:center;color:#e5e9df;font-size:11px;line-height:1.45;white-space:normal}
 #rightHud{position:absolute;right:12px;top:12px;display:flex;align-items:flex-start;gap:8px}
 #counter{padding:10px 12px;font-size:11px;font-weight:850;color:#e5dfcf;line-height:1.7;min-width:180px}
-#message{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);padding:9px 13px;font-size:11px;color:#f0e6d1;text-align:center;max-width:min(90vw,460px);opacity:0;transition:opacity .15s}
+#message{display:none!important;position:absolute;left:50%;bottom:90px;transform:translateX(-50%);padding:9px 13px;font-size:11px;color:#f0e6d1;text-align:center;max-width:min(90vw,460px);opacity:0;transition:opacity .15s}
 #crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#f3f2df;font-size:21px;text-shadow:0 1px 6px #000;font-weight:500}
 #desktopTip{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);padding:8px 12px;font-size:10px;color:#bdc5ba;white-space:nowrap}
 #start,#ending{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 52% 38%,#35403b88,#070909ed 70%)}
@@ -27,6 +27,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 .detail{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.detail div{padding:10px;border-radius:9px;background:#151d19;border:1px solid #2c3a31;font-size:10px;color:#c7d0c7}
 #endTitle{font-size:30px;font-weight:950;margin:9px 0}
 #controls{position:fixed;z-index:5;inset:0;display:none;pointer-events:none}
+#fullscreenButton{display:none;position:fixed;z-index:9;top:max(7px,env(safe-area-inset-top));right:max(7px,env(safe-area-inset-right));width:31px;height:31px;padding:0;place-items:center;border:1px solid #9ca994aa;border-radius:8px;background:#111914d9;color:#f2f5e9;font:700 20px/1 system-ui;box-shadow:0 2px 9px #0006;touch-action:manipulation;cursor:pointer;opacity:.82}
+#fullscreenButton:active{opacity:1;background:#344333}
 #stickBase{position:absolute;left:23px;bottom:28px;width:122px;height:122px;border-radius:50%;border:1px solid #becdb64d;background:#101815aa;pointer-events:auto;touch-action:none}
 #stickKnob{position:absolute;left:38px;top:38px;width:44px;height:44px;border-radius:50%;background:#c7d2b8b8;border:1px solid #edf2e4}
 #touchActions{position:absolute;right:18px;bottom:24px;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:auto}
@@ -35,9 +37,9 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 .touchBtn.run{width:58px;height:58px;background:#283841ed;border-color:#617d83}
 #interactButton{display:none;position:absolute;right:105px;bottom:58px;padding:13px 14px;border-radius:10px;border:1px solid #97895c;background:#343225ed;color:#fff;font-size:10px;font-weight:900;pointer-events:auto;touch-action:none}
 #flash{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;background:#b52a241f;box-shadow:inset 0 0 110px #d21d1d00}
-#moveDiag{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:8;pointer-events:none;background:#050807d9;border:1px solid #72806c;border-radius:7px;padding:5px 8px;color:#dfe9d8;font:10px/1.3 monospace;display:none;white-space:nowrap}
+#moveDiag{display:none!important;position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:8;pointer-events:none;background:#050807d9;border:1px solid #72806c;border-radius:7px;padding:5px 8px;color:#dfe9d8;font:10px/1.3 monospace;display:none;white-space:nowrap}
 #wakeFade{position:fixed;inset:0;z-index:7;background:#020403;opacity:0;pointer-events:none;transition:opacity .6s ease}
-#wakeCaption{position:fixed;left:50%;top:24%;transform:translateX(-50%);z-index:8;color:#e1dfd1;font:700 12px/1.5 monospace;letter-spacing:.18em;text-align:center;text-shadow:0 2px 8px #000;opacity:0;pointer-events:none;max-width:90vw}
+#wakeCaption{display:none!important;position:fixed;left:50%;top:24%;transform:translateX(-50%);z-index:8;color:#e1dfd1;font:700 12px/1.5 monospace;letter-spacing:.18em;text-align:center;text-shadow:0 2px 8px #000;opacity:0;pointer-events:none;max-width:90vw}
 @media(max-width:720px){
  #stats{left:7px;top:7px;width:186px;padding:8px;gap:6px}
  #objective{top:96px;left:8px;transform:none;max-width:205px;padding:8px;font-size:9px;text-align:left}
@@ -54,6 +56,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 </head>
 <body>
 <canvas id="game" aria-label="Demo jugable de supervivencia zombi"></canvas>
+<button id="fullscreenButton" type="button" aria-label="Ampliar pantalla" title="Ampliar pantalla">⛶</button>
 <div id="hud">
  <div id="stats" class="panel">
   <div class="meter"><label><span>VIDA</span><span id="hpVal">100</span></label><div class="track"><div id="hpFill" class="fill hp"></div></div></div>
@@ -418,7 +421,7 @@ function resetGame(){
  for(let i=loot.length-1;i>=0;i--){const l=loot[i];if(l.drop){world.remove(l.mesh);disposeGroup(l.mesh);loot.splice(i,1);}else{l.available=true;l.mesh.visible=true;}}
  if(actor){world.remove(actor);disposeGroup(actor);}player.x=13.35;player.z=11.35;player.yaw=-Math.PI/2;spawnGrace=4.0;stuckTimer=0;wakeElapsed=0;wakeScream1=false;wakeScream2=false;player.hp=100;player.stamina=100;player.hunger=100;player.thirst=100;player.dead=false;player.supplies=0;player.time=0;
  killCount=0;round=1;points=500;waveToSpawn=0;spawnClock=0;intermission=0;roundKills=0;openingSequence=4.8;roundHasStarted=false;stepTimer=0;alarmPlayed=false;cellGates.forEach(g=>{g.open=false;g.openAmount=0;g.mesh.rotation.y=0;});doors.forEach(d=>{d.open=false;d.openAmount=0;d.mesh.rotation.y=d.rotation;d.mesh.visible=true;});attackTimer=0;attackCooldown=0;playerHitTimer=0;runningTouch=false;joyX=0;joyY=0;lookPointer=null;for(const k in keys)keys[k]=false;stickId=null;knob.style.transform='translate(0,0)';paused=false;ended=false;cameraYaw=0;cameraPitch=-.035;camera.position.set(13,.96,11);camera.lookAt(13,.96,10);viewWeapon.visible=false;
- makePlayer();spawnZombies();updateHud();document.getElementById('ending').style.display='none';document.getElementById('start').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('controls').style.display='none';document.getElementById('moveDiag').style.display='none';document.getElementById('wakeFade').style.opacity='1';document.getElementById('wakeCaption').style.opacity='1';document.getElementById('wakeCaption').textContent='... ¿QUÉ ESTÁ PASANDO?';running=true;message('Despiertas en tu celda…',2400);
+ makePlayer();spawnZombies();updateHud();document.getElementById('ending').style.display='none';document.getElementById('start').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('controls').style.display='none';document.getElementById('fullscreenButton').style.display='grid';document.getElementById('moveDiag').style.display='none';document.getElementById('wakeFade').style.opacity='1';document.getElementById('wakeCaption').style.opacity='1';document.getElementById('wakeCaption').textContent='... ¿QUÉ ESTÁ PASANDO?';running=true;message('Despiertas en tu celda…',2400);
 }
 function initAudio(){if(audioReady)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ambientAudio=new AC();audioMaster=ambientAudio.createGain();audioMaster.gain.value=.62;audioMaster.connect(ambientAudio.destination);const drone=ambientAudio.createOscillator(),dg=ambientAudio.createGain(),df=ambientAudio.createBiquadFilter();drone.type='triangle';drone.frequency.value=43;df.type='lowpass';df.frequency.value=180;dg.gain.value=.12;drone.connect(df);df.connect(dg);dg.connect(audioMaster);drone.start();const hum=ambientAudio.createOscillator(),hg=ambientAudio.createGain();hum.type='sine';hum.frequency.value=57;hg.gain.value=.045;hum.connect(hg);hg.connect(audioMaster);hum.start();const buffer=ambientAudio.createBuffer(1,ambientAudio.sampleRate*2,ambientAudio.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.35;const wind=ambientAudio.createBufferSource(),wf=ambientAudio.createBiquadFilter(),wg=ambientAudio.createGain();wind.buffer=buffer;wind.loop=true;wf.type='lowpass';wf.frequency.value=390;wg.gain.value=.055;wind.connect(wf);wf.connect(wg);wg.connect(audioMaster);wind.start();audioReady=true;if(ambientAudio.state==='suspended')ambientAudio.resume();}
 function playSfx(type,pan=0){if(!ambientAudio||!audioMaster)return;if(ambientAudio.state==='suspended')ambientAudio.resume();const now=ambientAudio.currentTime,osc=ambientAudio.createOscillator(),gain=ambientAudio.createGain(),panner=ambientAudio.createStereoPanner();panner.pan.value=Math.max(-1,Math.min(1,pan));osc.connect(gain);gain.connect(panner);panner.connect(audioMaster);const preset={alarm:{wave:'sawtooth',from:480,to:210,dur:.95,vol:.045},knife:{wave:'sawtooth',from:240,to:95,dur:.13,vol:.07},hit:{wave:'triangle',from:115,to:48,dur:.19,vol:.14},death:{wave:'sawtooth',from:92,to:36,dur:.42,vol:.085},gate:{wave:'square',from:82,to:31,dur:.72,vol:.10},round:{wave:'sawtooth',from:125,to:310,dur:.85,vol:.10},step:{wave:'triangle',from:68,to:43,dur:.075,vol:.028},groan:{wave:'sawtooth',from:73+Math.random()*25,to:44,dur:.65,vol:.025}}[type];if(!preset)return;osc.type=preset.wave;osc.frequency.setValueAtTime(preset.from,now);osc.frequency.exponentialRampToValueAtTime(Math.max(20,preset.to),now+preset.dur);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(preset.vol,now+.018);gain.gain.exponentialRampToValueAtTime(.0001,now+preset.dur);osc.start(now);osc.stop(now+preset.dur+.03);}
@@ -479,7 +482,7 @@ function interact(){
  message('Suministros encontrados: vida, comida y agua recuperadas.');updateHud();
 }
 function endGame(win){
- ended=true;running=false;document.getElementById('controls').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('ending').style.display='flex';
+ ended=true;running=false;document.getElementById('controls').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('fullscreenButton').style.display='none';document.getElementById('ending').style.display='flex';
  document.getElementById('endTitle').textContent=win?'¡LOGRASTE ESCAPAR!':'TE HAN INFECTADO';
  document.getElementById('endText').textContent=win?'Has limpiado el camino y escapado de la prisión. Zombis eliminados: '+killCount+'. Suministros recogidos: '+player.supplies+'.':'Sobreviviste '+Math.floor(player.time)+' segundos y eliminaste '+killCount+' zombis. Busca cajas de suministros y usa el cuchillo cuando los infectados estén enfrente.';
 }
@@ -585,6 +588,17 @@ function updateZombies(dt,t){
  }
 }
 function updateCamera(dt){if(!actor)return;let rise=1;if(openingSequence>0){const t=Math.max(0,Math.min(1,(wakeElapsed-2.1)/3.6));rise=t*t*(3-2*t);cameraYaw=(-Math.PI/2)*rise;}const camY=openingSequence>0?.96+.66*rise:1.62;const pitch=openingSequence>0?-.035*(1-rise)+.03*rise:cameraPitch;const desired=new THREE.Vector3(player.x,camY,player.z);camera.position.lerp(desired,1-Math.exp(-24*dt));const look=new THREE.Vector3(Math.sin(cameraYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(cameraYaw)*Math.cos(pitch));camera.lookAt(desired.clone().add(look));actor.visible=false;viewWeapon.visible=openingSequence<=0;}
+function updateInteractHint(){
+ const button=document.getElementById('interactButton');
+ if(!button)return;
+ if(!running||paused||ended||openingSequence>0){button.style.display='none';return;}
+ let nearDoor=null,doorDistance=3.2;
+ for(const d of doors){if(d.open)continue;const distance=Math.hypot(d.x-player.x,d.z-player.z);if(distance<doorDistance){nearDoor=d;doorDistance=distance;}}
+ if(nearDoor){button.textContent=points>=nearDoor.price?'ABRIR':'ABRIR · '+nearDoor.price;button.style.display='block';return;}
+ let nearLoot=false;
+ for(const item of loot){if(item.available&&Math.hypot(item.x-player.x,item.z-player.z)<2.6){nearLoot=true;break;}}
+ button.textContent='REVISAR';button.style.display=nearLoot?'block':'none';
+}
 function frame(now){
  requestAnimationFrame(frame);const dt=Math.min(.04,(now-lastTime)/1000||0);lastTime=now;
  if(running&&!paused){
@@ -638,6 +652,27 @@ camera.position.set(13,1.62,11);camera.lookAt(12,1.62,11);
 requestAnimationFrame(frame);
 document.getElementById('play').addEventListener('click',resetGame);
 document.getElementById('again').addEventListener('click',resetGame);
+const fullscreenButton=document.getElementById('fullscreenButton');
+function syncFullscreenButton(){
+ const active=!!(document.fullscreenElement||document.webkitFullscreenElement);
+ fullscreenButton.textContent=active?'×':'⛶';
+ fullscreenButton.setAttribute('aria-label',active?'Salir de pantalla completa':'Ampliar pantalla');
+ fullscreenButton.title=active?'Salir de pantalla completa':'Ampliar pantalla';
+}
+fullscreenButton.addEventListener('click',async()=>{
+ try{
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+   if(document.exitFullscreen)await document.exitFullscreen();
+   else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  }else{
+   const root=document.documentElement;
+   if(root.requestFullscreen)await root.requestFullscreen();
+   else if(root.webkitRequestFullscreen)root.webkitRequestFullscreen();
+  }
+ }catch(error){console.warn('Pantalla completa no disponible en este navegador.',error);}
+});
+document.addEventListener('fullscreenchange',syncFullscreenButton);
+document.addEventListener('webkitfullscreenchange',syncFullscreenButton);
 document.getElementById('attackButton').addEventListener('pointerdown',e=>{e.preventDefault();attack();});
 document.getElementById('interactButton').addEventListener('pointerdown',e=>{e.preventDefault();interact();});
 document.getElementById('runButton').addEventListener('pointerdown',e=>{e.preventDefault();runningTouch=true;e.currentTarget.classList.add('active');});
