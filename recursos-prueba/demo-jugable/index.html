@@ -128,6 +128,7 @@ M.crate.map=makeGrimeTexture('#b2a07b','#534431','#d2c39d');
 const world=new THREE.Group();scene.add(world);
 // Infectados procedurales del propio demo; escala anclada al suelo, sin rigs externos flotantes.
 const colliders=[],zombies=[],loot=[],doors=[],flickerLights=[],cellGates=[],floorPlatforms=[];
+const stairRamp={minX:6.35,maxX:10.0,minZ:20.25,maxZ:28.0};
 let running=false,ended=false,paused=false,killCount=0,lastTime=performance.now(),messageUntil=0;
 let round=1,points=500,waveToSpawn=0,spawnClock=0,intermission=0,roundKills=0;
 let actor=null,parts=null,cameraYaw=0,cameraPitch=.03,attackTimer=0,attackCooldown=0,flashTime=0,playerHitTimer=0;
@@ -263,7 +264,6 @@ cube(world,2.7,.32,7.0,M.concrete,8.45,4.15,31.5,false);floorPlatforms.push({x:8
  cube(world,39.2,.18,43.2,M.concrete,0,8.78,27,false);cube(world,43.4,.18,33.5,M.concrete,0,5.72,-11,false);cube(world,35.4,.18,43.4,M.concrete,40,5.72,-3,false);cube(world,35.4,.18,43.4,M.concrete,-40,5.72,-3,false);
  for(const z of [10,21,32,43]){cube(world,1.8,.12,.22,M.light,-4.5,7.9,z,false);cube(world,1.8,.12,.22,M.light,4.5,7.9,z,false);}
  // Escalera transitable: peldaños visuales sin colisionadores; la rampa lógica permite subir.
-const stairRamp={minX:6.35,maxX:10.0,minZ:20.25,maxZ:28.0};
 for(let i=0;i<16;i++){const t=i/15,sx=6.8+t*2.7,sy=.09+t*4.12,sz=21+t*5.2;cube(world,2.8,.18,.75,M.concrete,sx,sy,sz);}
  // Cafetería cerrada con acceso de pago, mesas largas y cocina al fondo.
  addWall(-22,-11,.55,34,5.8,M.wall);addWall(22,-20,.55,18,5.8,M.wall);addWall(22,2,.55,10,5.8,M.wall);
