@@ -96,7 +96,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(inner
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.06;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#151b1a');scene.fog=new THREE.Fog('#151b1a',32,105);
-const camera=new THREE.PerspectiveCamera(66,innerWidth/innerHeight,.08,160);
+const camera=new THREE.PerspectiveCamera(66,innerWidth/innerHeight,.08,160);scene.add(camera);
 const hemi=new THREE.HemisphereLight(0xc3d0c1,0x272a24,1.75);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xe3d7bb,2.1);sun.position.set(-24,38,22);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-65;sun.shadow.camera.right=65;sun.shadow.camera.top=65;sun.shadow.camera.bottom=-65;scene.add(sun);
 const fill=new THREE.DirectionalLight(0x91abb5,.6);fill.position.set(20,10,-30);scene.add(fill);
@@ -281,25 +281,17 @@ cube(world,2.7,.32,13.0,M.concrete,8.45,4.15,13.25,false);floorPlatforms.push({x
 cube(world,2.7,.32,14.0,M.concrete,8.45,4.15,40,false);floorPlatforms.push({x:8.45,z:40,hx:1.35,hz:7,top:4.31});
 cube(world,2.7,.32,7.0,M.concrete,8.45,4.15,31.5,false);floorPlatforms.push({x:8.45,z:31.5,hx:1.35,hz:3.5,top:4.31});
  for(const side of [-1,1])for(const z of [11,20,29,38,46]){makeCell(side*13,z,0,side);makeCell(side*13,z,1,side);}
- // Barandales del segundo piso con entradas despejadas frente a cada celda.
+ // Barandales en el borde exterior real de cada galería; el hueco de la escalera queda abierto.
  for(const side of [-1,1]){
-  const railX=side*9.4,cellCenters=[11,20,29,38,46],start=7,end=47,doorHalf=1.3;
-  let cursor=start;
-  for(const center of cellCenters){
-   const gapStart=center-doorHalf,gapEnd=center+doorHalf;
-   if(gapStart>cursor){
-    const length=gapStart-cursor,mid=(cursor+gapStart)/2;
-    cube(world,.16,1.05,length,M.bars,railX,4.8,mid);
-    colliders.push({x:railX,z:mid,hx:.18,hz:length/2,rot:0});
-    for(let z=cursor+.35;z<gapStart-.15;z+=1.25){cube(world,.045,1,.045,M.metal,railX,4.8,z);colliders.push({x:railX,z,hx:.12,hz:.12,rot:0});}
-   }
-   cursor=gapEnd;
-  }
-  if(cursor<end){
-   const length=end-cursor,mid=(cursor+end)/2;
+  const railX=side*7.1;
+  for(const [startZ,endZ] of [[7,20.25],[28,47]]){
+   const length=endZ-startZ,mid=(startZ+endZ)/2;
    cube(world,.16,1.05,length,M.bars,railX,4.8,mid);
    colliders.push({x:railX,z:mid,hx:.18,hz:length/2,rot:0});
-   for(let z=cursor+.35;z<end-.15;z+=1.25){cube(world,.045,1,.045,M.metal,railX,4.8,z);colliders.push({x:railX,z,hx:.12,hz:.12,rot:0});}
+   for(let z=startZ+.35;z<endZ-.15;z+=1.25){
+    cube(world,.045,1,.045,M.metal,railX,4.8,z);
+    colliders.push({x:railX,z,hx:.12,hz:.12,rot:0});
+   }
   }
  }
  // Cierres de borde en los extremos de las galerías, fuera de la entrada de la escalera.
