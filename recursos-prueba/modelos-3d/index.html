@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tekaym Online — Visor de modelos 3D</title>
+<style>
+:root{color-scheme:dark;--bg:#101316;--panel:#1b2024;--line:#343d42;--text:#e9eeee;--muted:#9aa8ac;--accent:#d46b36}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:18px clamp(16px,4vw,40px);border-bottom:1px solid var(--line);background:#14191c}
+.kicker{color:var(--accent);font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:800}
+h1{margin:5px 0;font-size:clamp(22px,4vw,34px);letter-spacing:-.035em}p{margin:5px 0;color:var(--muted)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;padding:14px;max-width:1500px;margin:auto}
+#viewport{height:min(72vh,780px);min-height:420px;background:radial-gradient(ellipse at 50% 42%,#31393b 0,#1a2022 45%,#0d1012 100%);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#status{position:absolute;left:12px;bottom:12px;background:#101416dd;border:1px solid #41494c;padding:7px 10px;border-radius:6px;font-size:12px;color:#c5cdce}
+aside{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px;align-self:start}
+label{display:block;font-size:12px;color:var(--muted);margin:0 0 7px}
+select,button{width:100%;padding:11px 12px;border-radius:7px;border:1px solid #424b4f;background:#111619;color:var(--text);font:inherit}
+button{cursor:pointer;margin-top:9px;background:#2a3336}button:hover{border-color:var(--accent)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions a{color:#f1b18b;text-decoration:none;border:1px solid #424b4f;border-radius:7px;padding:10px 6px;text-align:center;font-size:12px}
+hr{border:0;border-top:1px solid var(--line);margin:17px 0}.detail{font-size:13px;color:#b6c0c2}.detail strong{display:block;color:#eef1f1;margin:0 0 4px}
+footer{max-width:1500px;margin:auto;padding:0 18px 22px;color:var(--muted);font-size:12px}
+@media(max-width:850px){main{grid-template-columns:1fr;padding:10px}#viewport{height:56vh;min-height:350px}aside{order:2}.actions{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div class="kicker">Tekaym Online / recursos propios</div><h1>Visor de modelos 3D</h1><p>Prototipos de malla para el survival horror de la prisión abandonada.</p></header>
+<main>
+<section id="viewport" aria-label="Vista interactiva del modelo 3D"><div id="status">Preparando visor 3D…</div></section>
+<aside>
+<label for="asset">Modelo</label>
+<select id="asset">
+<option value="zombie-prisionero.obj">Zombi prisionero</option>
+<option value="cuchillo-supervivencia.obj">Cuchillo de supervivencia</option>
+<option value="puerta-celda.obj">Puerta de celda</option>
+<option value="litera-prision.obj">Litera de prisión</option>
+</select>
+<button id="reload">Cargar modelo</button>
+<button id="reset">Restablecer cámara</button>
+<hr>
+<div class="detail"><strong id="modelName">Zombi prisionero</strong><span id="description">Personaje con uniforme naranja, rasgos faciales, manos y botas.</span></div>
+<hr>
+<div class="actions"><a id="downloadObj" href="zombie-prisionero.obj" download>Descargar OBJ</a><a href="tekaym_materiales.mtl" download>Materiales MTL</a></div>
+<p style="font-size:12px;margin-top:12px">Arrastra para rotar · pellizca o usa la rueda para acercar · arrastra con dos dedos para mover.</p>
+</aside>
+</main>
+<footer>Entrega inicial: geometría 3D estática y materiales base. Aún necesita texturas bitmap/UV, revisión visual, optimización y rigging antes de considerarse arte final de producción. Esta carpeta es independiente de DarkPixel Online.</footer>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+import {OBJLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/OBJLoader.js';
+import {MTLLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/MTLLoader.js';
+const host=document.getElementById('viewport'),status=document.getElementById('status'),selector=document.getElementById('asset');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x171c1e);
+const camera=new THREE.PerspectiveCamera(42,1,.01,1000);camera.position.set(3,2.5,4);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;host.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1,0);
+scene.add(new THREE.HemisphereLight(0xbacbd0,0x27201b,2.1));
+const key=new THREE.DirectionalLight(0xffdfc0,3.2);key.position.set(4,7,5);scene.add(key);
+const fill=new THREE.DirectionalLight(0x8aa9c9,1.6);fill.position.set(-4,3,-3);scene.add(fill);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshStandardMaterial({color:0x292e30,roughness:.94,metalness:.04}));floor.rotation.x=-Math.PI/2;floor.position.y=-.025;scene.add(floor);
+const grid=new THREE.GridHelper(12,24,0x586064,0x343b3d);grid.position.y=-.018;scene.add(grid);
+let current=null;
+const meta={
+'zombie-prisionero.obj':['Zombi prisionero','Personaje con uniforme naranja, rasgos faciales, manos y botas.'],
+'cuchillo-supervivencia.obj':['Cuchillo de supervivencia','Arma inicial con empuñadura, guarda y hoja metálica.'],
+'puerta-celda.obj':['Puerta de celda','Marco oxidado, barrotes, bisagras, cerradura y manija.'],
+'litera-prision.obj':['Litera de prisión','Estructura metálica, dos niveles, colchones, somieres y escalera.']
+};
+function fit(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}
+function resetCamera(){camera.position.set(3,2.5,4);controls.target.set(0,1,0);controls.update()}
+function loadModel(){
+ if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose()}});current=null}
+ const file=selector.value;status.textContent='Cargando malla…';
+ const mtlLoader=new MTLLoader();mtlLoader.setPath('./');
+ mtlLoader.load('tekaym_materiales.mtl',materials=>{
+  materials.preload();const loader=new OBJLoader();loader.setMaterials(materials);loader.setPath('./');
+  loader.load(file,obj=>{
+   const box=new THREE.Box3().setFromObject(obj),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+   obj.position.sub(center);const max=Math.max(size.x,size.y,size.z)||1;obj.scale.setScalar(2.8/max);obj.position.y+=1.35;
+   obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;o.material.needsUpdate=true}}});
+   current=obj;scene.add(obj);controls.target.set(0,1.25,0);resetCamera();status.textContent='Modelo cargado · '+file;
+  },undefined,e=>{status.textContent='No se pudo cargar la malla: '+file;console.error(e)});
+ },undefined,e=>{status.textContent='No se pudieron cargar los materiales MTL';console.error(e)});
+ const [name,desc]=meta[file];document.getElementById('modelName').textContent=name;document.getElementById('description').textContent=desc;document.getElementById('downloadObj').href=file;
+}
+document.getElementById('reload').addEventListener('click',loadModel);selector.addEventListener('change',loadModel);document.getElementById('reset').addEventListener('click',resetCamera);
+new ResizeObserver(fit).observe(host);fit();loadModel();
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
+</script>
+</body></html>
