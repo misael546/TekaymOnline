@@ -11,14 +11,14 @@
 canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
 .panel{background:rgba(9,14,15,.88);border:1px solid #3b4540;border-radius:12px;box-shadow:0 8px 24px #0005;backdrop-filter:blur(8px)}
 #hud{position:fixed;inset:0;z-index:3;pointer-events:none;display:none}
-#stats{position:absolute;left:12px;top:12px;width:min(310px,calc(100vw - 24px));padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.meter{min-width:0}.meter label{display:flex;justify-content:space-between;gap:6px;font-size:10px;letter-spacing:.3px;color:#bec8be;font-weight:800;margin-bottom:5px}.track{height:7px;background:#252d29;border-radius:6px;overflow:hidden}.fill{height:100%;width:100%;background:#8fc37b;transition:width .12s}.hp{background:#ce6b5e}.stamina{background:#dfc16d}.water{background:#80b8d0}.food{background:#c8a071}
-#objective{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:min(400px,calc(100vw - 340px));padding:10px 14px;text-align:center;color:#e5e9df;font-size:11px;line-height:1.45;white-space:normal}
-#rightHud{position:absolute;right:12px;top:12px;display:flex;align-items:flex-start;gap:8px}
-#counter{padding:10px 12px;font-size:11px;font-weight:850;color:#e5dfcf;line-height:1.7;min-width:180px}
+#stats{position:absolute;left:10px;top:10px;width:min(238px,calc(100vw - 20px));padding:10px;display:grid;grid-template-columns:1fr;gap:8px}
+.meter{min-width:0}.meter label{display:flex;justify-content:space-between;gap:6px;font-size:10px;letter-spacing:.3px;color:#bec8be;font-weight:800;margin-bottom:5px}.track{height:7px;background:#252d29;border-radius:6px;overflow:hidden}.fill{height:100%;width:100%;background:#8fc37b;transition:width .12s}.hp{background:#ce6b5e}#compactCounters{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:900;letter-spacing:.3px;color:#d8dfd3}#compactCounters b{color:#f4d37d;font-variant-numeric:tabular-nums}
+#objective{display:none!important}
+#rightHud{display:none!important}
+#counter{display:none!important}
 #message{display:none!important;position:absolute;left:50%;bottom:90px;transform:translateX(-50%);padding:9px 13px;font-size:11px;color:#f0e6d1;text-align:center;max-width:min(90vw,460px);opacity:0;transition:opacity .15s}
 #crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#f3f2df;font-size:21px;text-shadow:0 1px 6px #000;font-weight:500}
-#desktopTip{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);padding:8px 12px;font-size:10px;color:#bdc5ba;white-space:nowrap}
+#desktopTip{display:none!important}
 #start,#ending{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 52% 38%,#35403b88,#070909ed 70%)}
 .card{width:min(510px,100%);padding:26px;border:1px solid #48554b;border-radius:18px;background:#0c1211f2;box-shadow:0 22px 70px #000b}
 .kicker{font-size:10px;letter-spacing:2px;color:#a7b394;font-weight:900}.title{font-size:clamp(27px,7vw,43px);line-height:1.02;letter-spacing:-1.8px;font-weight:950;margin:12px 0}
@@ -37,15 +37,12 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 .touchBtn.run{width:58px;height:58px;background:#283841ed;border-color:#617d83}
 #interactButton{display:none;position:absolute;right:105px;bottom:58px;padding:13px 14px;border-radius:10px;border:1px solid #97895c;background:#343225ed;color:#fff;font-size:10px;font-weight:900;pointer-events:auto;touch-action:none}
 #flash{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;background:#b52a241f;box-shadow:inset 0 0 110px #d21d1d00}
-#moveDiag{display:none!important;position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:8;pointer-events:none;background:#050807d9;border:1px solid #72806c;border-radius:7px;padding:5px 8px;color:#dfe9d8;font:10px/1.3 monospace;display:none;white-space:nowrap}
+#moveDiag{display:none!important}
 #wakeFade{position:fixed;inset:0;z-index:7;background:#020403;opacity:0;pointer-events:none;transition:opacity .6s ease}
 #wakeCaption{display:none!important;position:fixed;left:50%;top:24%;transform:translateX(-50%);z-index:8;color:#e1dfd1;font:700 12px/1.5 monospace;letter-spacing:.18em;text-align:center;text-shadow:0 2px 8px #000;opacity:0;pointer-events:none;max-width:90vw}
 @media(max-width:720px){
- #stats{left:7px;top:7px;width:186px;padding:8px;gap:6px}
- #objective{top:96px;left:8px;transform:none;max-width:205px;padding:8px;font-size:9px;text-align:left}
- #rightHud{top:7px;right:7px;gap:5px;flex-direction:column-reverse;align-items:flex-end}
- #counter{padding:7px 8px;font-size:9px}
- #desktopTip{display:none}#message{bottom:155px}
+ #stats{left:7px;top:7px;width:205px;padding:8px;gap:7px}
+ #objective,#rightHud,#counter,#desktopTip,#message,#moveDiag,#wakeCaption{display:none!important}
  #stickBase{left:16px;bottom:18px;width:110px;height:110px}#stickKnob{left:33px;top:33px}
  #touchActions{right:14px;bottom:15px;gap:8px}
  .touchBtn.attack{width:68px;height:68px}.touchBtn{width:59px;height:59px}.touchBtn.run{width:50px;height:50px}
@@ -60,9 +57,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 <div id="hud">
  <div id="stats" class="panel">
   <div class="meter"><label><span>VIDA</span><span id="hpVal">100</span></label><div class="track"><div id="hpFill" class="fill hp"></div></div></div>
-  <div class="meter"><label><span>RESISTENCIA</span><span id="stVal">100</span></label><div class="track"><div id="stFill" class="fill stamina"></div></div></div>
-  <div class="meter"><label><span>HAMBRE</span><span id="foodVal">100</span></label><div class="track"><div id="foodFill" class="fill food"></div></div></div>
-  <div class="meter"><label><span>SED</span><span id="waterVal">100</span></label><div class="track"><div id="waterFill" class="fill water"></div></div></div>
+  <div id="compactCounters" aria-label="Marcadores de partida"><span>INFECTADOS <b id="kills">0</b></span><span>ORO <b id="points">500</b></span></div>
  </div>
  <div id="objective" class="panel">RONDA 1 · Sobrevive, consigue puntos y compra puertas para explorar la prisión.</div>
  <div id="rightHud"><div id="counter" class="panel">RONDA <span id="round">1</span><br>PUNTOS <span id="points">500</span><br>ZOMBIS <span id="kills">0</span></div></div>
@@ -82,7 +77,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
   <div class="sub">Sobrevive a oleadas de infectados dentro de una prisión de cuatro sectores. Gana puntos al eliminarlos y gástalos para abrir las puertas entre zonas.</div>
   <div class="detail">
    <div><strong>COMBATE</strong><br>Cuchillo cuerpo a cuerpo</div>
-   <div><strong>SUPERVIVENCIA</strong><br>Vida, sed, hambre y resistencia</div>
+   <div><strong>SUPERVIVENCIA</strong><br>La vida es tu único indicador</div>
    <div><strong>RONDA</strong><br>Oleadas cada vez mayores</div>
    <div><strong>EXPLORACIÓN</strong><br>Puertas bloqueadas por puntos</div>
   </div>
@@ -487,11 +482,12 @@ function endGame(win){
  document.getElementById('endText').textContent=win?'Has limpiado el camino y escapado de la prisión. Zombis eliminados: '+killCount+'. Suministros recogidos: '+player.supplies+'.':'Sobreviviste '+Math.floor(player.time)+' segundos y eliminaste '+killCount+' zombis. Busca cajas de suministros y usa el cuchillo cuando los infectados estén enfrente.';
 }
 function updateHud(){
- const set=(id,fill,v)=>{document.getElementById(id).textContent=Math.ceil(v);document.getElementById(fill).style.width=Math.max(0,Math.min(100,v))+'%';};
- set('hpVal','hpFill',player.hp);set('stVal','stFill',player.stamina);set('foodVal','foodFill',player.hunger);set('waterVal','waterFill',player.thirst);
- document.getElementById('kills').textContent=zombies.filter(z=>z.alive).length+waveToSpawn;
- document.getElementById('round').textContent=round;document.getElementById('points').textContent=points;
- const zone=currentZone();document.getElementById('objective').textContent='ZONA · '+zoneInfo[zone].name+' · RONDA '+round+' · Elimina oleadas y compra puertas con puntos.';
+ const hpVal=document.getElementById('hpVal'),hpFill=document.getElementById('hpFill');
+ if(hpVal)hpVal.textContent=Math.ceil(player.hp);
+ if(hpFill)hpFill.style.width=Math.max(0,Math.min(100,player.hp))+'%';
+ const zombieCounter=document.getElementById('kills'),goldCounter=document.getElementById('points');
+ if(zombieCounter)zombieCounter.textContent=zombies.filter(z=>z.alive).length+waveToSpawn;
+ if(goldCounter)goldCounter.textContent=points;
 }
 function updatePlayer(dt,t){
  if(!running||paused||ended||openingSequence>0)return;
@@ -517,8 +513,7 @@ function updatePlayer(dt,t){
   if(stuckTimer>.45){const candidates=[[player.x+Math.sign(mx||1)*.7,player.z],[player.x,player.z+Math.sign(mz||1)*.7],[13,11],[13,10.2],[12.2,11]];let recovered=false;for(const p of candidates){if(!collide(p[0],p[1],.32)){player.x=p[0];player.z=p[1];recovered=true;break;}}if(!recovered&&Math.hypot(player.x-13,player.z-11)<3.2){player.x+=mx*1.5;player.z+=mz*1.5;}stuckTimer=0;}
   player.yaw=Math.atan2(mx,mz);if(actor)actor.rotation.y=player.yaw;
  }
- player.time+=dt;player.hunger=Math.max(0,player.hunger-.045*dt);player.thirst=Math.max(0,player.thirst-.065*dt);
- if(player.hunger<=0||player.thirst<=0)player.hp=Math.max(0,player.hp-(player.hunger<=0?1.6:.8)*dt);
+ player.time+=dt;
  attackCooldown=Math.max(0,attackCooldown-dt);attackTimer=Math.max(0,attackTimer-dt);
  if(attackTimer<=0&&parts)parts.armR.rotation.x=0;
  if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
@@ -639,7 +634,7 @@ function frame(now){
     parts.armL.rotation.x=.28*impact;parts.armR.rotation.x=.4*impact;playerHitTimer=Math.max(0,playerHitTimer-dt);
    }
   }
-  updateCamera(dt);if(openingSequence>0){camera.position.x+=Math.sin(now*.04)*.018;camera.position.y+=Math.sin(now*.067)*.012;}
+  updateCamera(dt);
  }
  if(flashTime>0){flashTime-=dt;document.getElementById('flash').style.opacity=String(Math.min(.75,flashTime*2.6));}else document.getElementById('flash').style.opacity='0';
  if(performance.now()>messageUntil)document.getElementById('message').style.opacity='0';
