@@ -215,7 +215,7 @@ function createWorld(){
  for(const side of [-1,1])for(const z of [11,20,29,38,46]){makeCell(side*13,z,0,side);makeCell(side*13,z,1,side);}
  for(const side of [-1,1]){cube(world,.16,1.05,41,M.bars,side*9.4,4.8,27);for(let z=7;z<=47;z+=1.25)cube(world,.045,1,.045,M.metal,side*9.4,4.8,z);}
  for(const z of [10,21,32,43]){cube(world,1.8,.12,.22,M.light,-4.5,7.9,z,false);cube(world,1.8,.12,.22,M.light,4.5,7.9,z,false);}
- for(let i=0;i<12;i++)cube(world,2.8,.18,.75,M.concrete,6.8+i*.25,.18+i*.27,21+i*.32);
+ for(let i=0;i<16;i++)cube(world,2.8,.18,.75,M.concrete,6.8+i*.18,.18+i*.27,21+i*.32);
  // Cafetería cerrada con acceso de pago, mesas largas y cocina al fondo.
  addWall(-22,-11,.55,34,5.8,M.wall);addWall(22,-20,.55,18,5.8,M.wall);addWall(22,2,.55,10,5.8,M.wall);
  addWall(-22,-20,.55,18,5.8,M.wall);addWall(-22,2,.55,10,5.8,M.wall);addWall(0,-28,44,.55,5.8,M.wall);
