@@ -217,7 +217,13 @@ function createActor(type){
  const hips=new THREE.Group();root.add(hips);hips.position.y=.95;
  cube(hips,.52,.28,.34,pants,0,0,0);
  const torso=new THREE.Group();root.add(torso);torso.position.y=1.34;
- cube(torso,.61,.72,.34,shirt,0,0,0);
+ if(type==='survivor_female'){
+  cube(torso,.53,.53,.31,shirt,0,.04,0);
+  cube(torso,.41,.22,.28,shirt,0,-.24,0);
+  cube(torso,.59,.23,.34,mat('#424b4a'),0,-.38,0);
+  cube(torso,.12,.22,.035,mat('#8e6857'),-.15,-.02,.175);
+  cube(torso,.12,.22,.035,mat('#8e6857'),.15,-.02,.175);
+ }else cube(torso,.61,.72,.34,shirt,0,0,0);
  cylinder(torso,.12,.14,.16,skin,0,.42,0,8);
  sphere(torso,.24,skin,0,.74,0,10);
  // ears
@@ -227,15 +233,29 @@ function createActor(type){
   cube(torso,.51,.13,.46,mat(type==='survivor_soldier'?'#4b6040':'#373f3e'),0,.94,0);
   cube(torso,.42,.08,.38,mat(type==='survivor_soldier'?'#576c49':'#495352'),0,.99,0);
  }else if(type==='survivor_female'){
-  sphere(torso,.25,hair,0,.83,-.07,9);cube(torso,.46,.52,.14,hair,0,.52,-.16);
+  sphere(torso,.245,hair,0,.83,-.035,10);
+  cube(torso,.43,.43,.13,hair,0,.59,-.13);
+  cube(torso,.10,.39,.12,hair,0,.35,-.235);
+  sphere(torso,.095,hair,.08,.28,-.24,7);
+  cube(torso,.43,.065,.15,mat('#9a7562'),0,.32,.13);
  }else{sphere(torso,.22,hair,0,.91,-.035,8);if(spec.type==='zombie')sphere(torso,.12,mat('#49493b'),-.14,.93,.02,6);}
  for(const s of [-1,1]){
   sphere(torso,.036,eye,s*.085,.77,.207,7);sphere(torso,.018,iris,s*.085,.77,.237,6);
   cube(torso,.1,.035,.025,dark,s*.085,.69,.207);
  }
  if(spec.type==='zombie'){
-  sphere(torso,.07,mat('#663b30'),-.13,.59,.185,6);sphere(torso,.04,mat('#6e3931'),.13,.47,.19,6);
-  cube(torso,.12,.025,.025,mat('#2d2724'),0,.65,.19);
+  const woundMat=mat('#542923',.98),bruiseMat=mat('#332824',.99);
+  const wound=(points,z,material)=>{
+   const sh=new THREE.Shape();sh.moveTo(points[0][0],points[0][1]);
+   for(let i=1;i<points.length;i++)sh.lineTo(points[i][0],points[i][1]);
+   sh.closePath();const patch=new THREE.Mesh(new THREE.ShapeGeometry(sh),material);
+   patch.position.z=z;patch.material.side=THREE.DoubleSide;patch.castShadow=false;torso.add(patch);
+  };
+  wound([[-.18,.33],[-.12,.39],[-.07,.32],[-.03,.28],[-.09,.25],[-.17,.27]],.173,woundMat);
+  wound([[.09,.10],[.16,.14],[.13,.07],[.19,.02],[.12,-.02],[.06,.035]],.173,bruiseMat);
+  if(type==='zombie_runner'||type==='zombie_brute'||type==='mutant_boss')wound([[-.26,.06],[-.20,.09],[-.17,.025],[-.21,-.05],[-.27,-.02]],.173,woundMat);
+  cube(torso,.15,.045,.012,mat('#363831'),-.18,-.13,.173);
+  cube(torso,.09,.03,.012,mat('#282c28'),.19,-.18,.173);
  }
  if(type==='survivor_soldier'){
   cube(torso,.19,.27,.12,mat('#384c36'),-.37,.08,.06);
@@ -246,10 +266,13 @@ function createActor(type){
   cube(torso,.48,.65,.07,mat(type==='zombie_doctor'?'#4b7470':'#b8c1ba'),0,-.02,.2);
   cube(torso,.09,.12,.045,mat('#813b32'),.1,.13,.25);
  }
- const shoulderL=limb(root,-.39,1.63,0,.42,.18,shirt),shoulderR=limb(root,.39,1.63,0,.42,.18,shirt);
- const elbowL=limb(shoulderL,0,-.4,0,.39,.145,shirt),elbowR=limb(shoulderR,0,-.4,0,.39,.145,shirt);
+ const female=type==='survivor_female';
+ const armW=female?.145:.18,shoulderOffset=female?.34:.39;
+ const shoulderL=limb(root,-shoulderOffset,1.63,0,.42,armW,shirt),shoulderR=limb(root,shoulderOffset,1.63,0,.42,armW,shirt);
+ const elbowL=limb(shoulderL,0,-.4,0,.39,female?.12:.145,shirt),elbowR=limb(shoulderR,0,-.4,0,.39,female?.12:.145,shirt);
  sphere(elbowL,.075,skin,0,-.37,.02,7);sphere(elbowR,.075,skin,0,-.37,.02,7);
- const hipL=limb(root,-.17,.94,0,.52,.22,pants),hipR=limb(root,.17,.94,0,.52,.22,pants);
+ const hipOffset=type==='survivor_female'?.19:.17,hipWidth=type==='survivor_female'?.235:.22;
+ const hipL=limb(root,-hipOffset,.94,0,.52,hipWidth,pants),hipR=limb(root,hipOffset,.94,0,.52,hipWidth,pants);
  const kneeL=limb(hipL,0,-.51,0,.47,.17,pants),kneeR=limb(hipR,0,-.51,0,.47,.17,pants);
  cube(kneeL,.23,.13,.38,dark,0,-.47,.08);cube(kneeR,.23,.13,.38,dark,0,-.47,.08);
  let backpack=null;
@@ -275,45 +298,46 @@ function setAnimation(name){
  if(actorParts){actorParts.root.rotation.set(0,0,0);actorParts.root.position.y=0;}
 }
 function resetActor(){const type=document.querySelector('#character').value;actorParts=createActor(type);setAnimation('idle');}
-function resetPose(p){p.root.rotation.set(0,0,0);p.root.position.y=0;p.torso.rotation.set(0,0,0);p.shoulderL.rotation.set(0,0,0);p.shoulderR.rotation.set(0,0,0);p.elbowL.rotation.set(0,0,0);p.elbowR.rotation.set(0,0,0);p.hipL.rotation.set(0,0,0);p.hipR.rotation.set(0,0,0);p.kneeL.rotation.set(0,0,0);p.kneeR.rotation.set(0,0,0);if(p.backpack)p.backpack.rotation.set(0,0,0);}
+function resetPose(p){p.root.rotation.set(0,0,0);p.root.position.y=0;p.torso.rotation.set(0,0,0);for(const k of ['shoulderL','shoulderR','elbowL','elbowR','hipL','hipR','kneeL','kneeR'])p[k].rotation.set(0,0,0);if(p.backpack)p.backpack.rotation.set(0,0,0);}
+const clamp01=v=>Math.max(0,Math.min(1,v));
+const smooth=(a,b,t)=>{const q=clamp01((t-a)/(b-a));return q*q*(3-2*q);};
 function animateActor(now){
  if(!actorParts)return;
- const p=actorParts;resetPose(p);
- const elapsed=(now-animationStart)*Number(document.querySelector('#speed').value);
- const w=animation==='run'?10:animation==='walk'?6:2.4;
- const swing=Math.sin(elapsed*w);
+ const p=actorParts,elapsed=(now-animationStart)*Number(document.querySelector('#speed').value);
+ const moving=animation==='walk'||animation==='run',run=animation==='run',rate=run?8.8:5.4,phase=elapsed*rate,swing=Math.sin(phase),opposite=Math.sin(phase+Math.PI);
+ resetPose(p);
  if(animation==='idle'){
-  p.root.position.y=.025+Math.sin(now*2.4)*.025;
-  p.torso.rotation.x=Math.sin(now*1.2)*.025;
-  p.shoulderL.rotation.x=Math.sin(now*1.6)*.035;p.shoulderR.rotation.x=-Math.sin(now*1.6)*.035;
- }else if(animation==='walk'||animation==='run'){
-  const amp=animation==='run'?.95:.55;
-  p.hipL.rotation.x=swing*amp;p.hipR.rotation.x=-swing*amp;
-  p.kneeL.rotation.x=Math.max(0,-swing)*.65;p.kneeR.rotation.x=Math.max(0,swing)*.65;
-  p.shoulderL.rotation.x=-swing*.8;p.shoulderR.rotation.x=swing*.8;
-  p.elbowL.rotation.x=-.16-Math.abs(swing)*.3;p.elbowR.rotation.x=-.16-Math.abs(swing)*.3;
-  p.torso.rotation.x=animation==='run'?.17:.05;
-  p.root.position.y=Math.abs(Math.sin(elapsed*w*2))*(animation==='run'?.11:.045);
-  p.root.rotation.y=Math.sin(elapsed*w*.5)*.035;
+  const breath=Math.sin(now*1.7),sway=Math.sin(now*.83);
+  p.root.position.y=.018+Math.sin(now*2.2)*.012;p.torso.rotation.x=.02+breath*.018;p.torso.rotation.z=sway*.012;
+  p.shoulderL.rotation.x=-.035+breath*.018;p.shoulderR.rotation.x=-.035-breath*.018;p.elbowL.rotation.x=-.10;p.elbowR.rotation.x=-.11;
+  if(p.backpack)p.backpack.rotation.x=-breath*.012;
+ }else if(moving){
+  const amp=run?1.02:.58;p.hipL.rotation.x=swing*amp;p.hipR.rotation.x=opposite*amp;
+  p.kneeL.rotation.x=Math.max(0,-swing)*(run?.95:.52);p.kneeR.rotation.x=Math.max(0,-opposite)*(run?.95:.52);
+  p.shoulderL.rotation.x=-swing*(run?.78:.54);p.shoulderR.rotation.x=-opposite*(run?.78:.54);
+  p.shoulderL.rotation.z=run?-.06:.025;p.shoulderR.rotation.z=run?.06:-.025;
+  p.elbowL.rotation.x=-.24-Math.max(0,swing)*.38;p.elbowR.rotation.x=-.24-Math.max(0,opposite)*.38;
+  p.torso.rotation.x=run?.20:.055;p.torso.rotation.y=Math.sin(phase*.5)*.055;p.torso.rotation.z=Math.sin(phase)*.035;
+  p.root.position.y=.012+Math.abs(Math.sin(phase*2))*(run?.045:.018);
+  if(p.backpack){p.backpack.rotation.x=Math.sin(phase)*.035;p.backpack.rotation.z=Math.sin(phase*.5)*.025;}
  }else if(animation==='attack'){
-  const phase=Math.min(1,elapsed/.72);
-  const recoil=phase<.3?phase/.3:phase<.6?1-(phase-.3)/.3:.0;
-  p.shoulderR.rotation.x=-1.3*recoil;p.shoulderR.rotation.z=-.45*recoil;
-  p.elbowR.rotation.x=-.9*recoil;
-  p.shoulderL.rotation.x=.25*recoil;
-  p.torso.rotation.y=-.25*recoil;p.torso.rotation.x=.08*recoil;
-  if(elapsed>.78)setAnimation('idle');
+  const wind=smooth(0,.17,elapsed)*(1-smooth(.17,.34,elapsed)),strike=smooth(.16,.29,elapsed)*(1-smooth(.29,.53,elapsed)),follow=smooth(.30,.52,elapsed)*(1-smooth(.52,.78,elapsed));
+  p.shoulderR.rotation.x=-.35*wind-1.75*strike+.18*follow;p.shoulderR.rotation.z=-.20*wind-.46*strike+.10*follow;
+  p.elbowR.rotation.x=-.65*wind-.95*strike-.15*follow;p.shoulderL.rotation.x=.18*wind+.38*strike-.12*follow;
+  p.elbowL.rotation.x=-.20*wind-.25*strike;p.torso.rotation.y=-.28*wind+.22*strike-.08*follow;p.torso.rotation.x=.10*wind+.20*strike-.06*follow;
+  if(elapsed>.92)setAnimation('idle');
  }else if(animation==='hit'){
-  const phase=Math.min(1,elapsed/.75),kick=Math.sin(phase*Math.PI);
-  p.torso.rotation.x=-.36*kick;p.torso.rotation.z=.22*kick;p.root.position.y=.035*kick;
-  p.shoulderL.rotation.x=.6*kick;p.shoulderR.rotation.x=.75*kick;
-  if(elapsed>.8)setAnimation('idle');
+  const recoil=Math.exp(-elapsed*6.8)*smooth(0,.07,elapsed),settle=Math.exp(-Math.max(0,elapsed-.12)*3.4);
+  p.torso.rotation.x=-.42*recoil;p.torso.rotation.z=.28*recoil;p.root.rotation.z=.08*recoil;p.root.position.y=.025*recoil;
+  p.shoulderL.rotation.x=.72*recoil;p.shoulderR.rotation.x=.9*recoil;p.elbowL.rotation.x=-.22*recoil;p.elbowR.rotation.x=-.35*recoil;p.root.rotation.y+=Math.sin(elapsed*18)*.025*settle;
+  if(elapsed>.85)setAnimation('idle');
  }else if(animation==='death'){
-  const phase=Math.min(1,elapsed/.9),e=phase*phase*(3-2*phase);
-  p.root.rotation.x=e*1.48;p.root.rotation.z=e*.05;p.root.position.y=-e*.1;
-  p.shoulderL.rotation.x=e*.55;p.shoulderR.rotation.x=e*.65;p.hipL.rotation.x=e*.55;p.hipR.rotation.x=e*.65;
+  const e=smooth(0,1.35,elapsed),collapse=smooth(.12,.75,elapsed);
+  p.root.rotation.z=e*1.05;p.root.rotation.x=e*.38;p.root.position.y=-collapse*.18;p.torso.rotation.x=collapse*.30;
+  p.shoulderL.rotation.x=e*.72;p.shoulderR.rotation.x=e*.82;p.shoulderL.rotation.z=-e*.28;p.shoulderR.rotation.z=e*.35;
+  p.hipL.rotation.x=e*.5;p.hipR.rotation.x=e*.64;p.kneeL.rotation.x=e*.4;p.kneeR.rotation.x=e*.6;
  }
- if(autoSpin&&animation!=='death')p.root.rotation.y=Math.sin(now*.45)*.42;
+ if(autoSpin&&animation!=='death')p.root.rotation.y+=Math.sin(now*.45)*.42;
 }
 
 const opts=[['cells','Bloque de celdas'],['cafeteria','Comedor'],['yard','Patio'],['infirmary','Enfermería'],['showers','Duchas'],['arsenal','Arsenal'],['lab','Laboratorio'],['workshop','Taller'],['gate','Portón']];
