@@ -599,7 +599,7 @@ function updateZombies(dt,t){
   const p=z.parts;
   if(z.dying){
    z.deathTimer+=dt;
-   if(z.mixer){z.mixer.update(dt);if(!z.actions?.dead){const u=Math.max(0,Math.min(1,z.deathTimer/1.05));z.mesh.rotation.z=z.deathSide*1.28*(u*u*(3-2*u));z.mesh.position.y=-.12*(u*u*(3-2*u));}if(z.deathTimer>=1.05){world.remove(z.mesh);disposeGroup(z.mesh);z.dying=false;z.removed=true;}continue;}
+   if(z.mixer){z.mixer.update(dt);if(!z.actions?.dead){const u=Math.max(0,Math.min(1,z.deathTimer/1.05));z.mesh.rotation.z=z.deathSide*1.28*(u*u*(3-2*u));z.mesh.position.y=-.12*(u*u*(3-2*u));}if(z.deathTimer>=1.45){world.remove(z.mesh);disposeGroup(z.mesh);z.dying=false;z.removed=true;}continue;}
    const u=Math.max(0,Math.min(1,z.deathTimer/1.05)),fall=u*u*(3-2*u);
    resetPose(p);
    p.torso.rotation.x=.72*fall;p.armL.rotation.x=.9*fall;p.armR.rotation.x=.78*fall;
@@ -629,7 +629,7 @@ function updateZombies(dt,t){
    if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
   }
   const sw=Math.sin(z.phase),counter=Math.sin(z.phase+Math.PI),walking=d>1.3&&d<30;
-  if(z.mixer){if(z.attackAnim>0)z.attackAnim=Math.max(0,z.attackAnim-dt);if(z.hitTimer>0)z.hitTimer=Math.max(0,z.hitTimer-dt);const animState=z.attackAnim>0?'attack':z.hitTimer>0?'hit':walking?'walk':'idle';setZombieAnimation(z,animState);z.mixer.update(dt);continue;}
+  if(z.mixer){if(z.attackAnim>0)z.attackAnim=Math.max(0,z.attackAnim-dt);if(z.hitTimer>0)z.hitTimer=Math.max(0,z.hitTimer-dt);let animState=z.attackAnim>0?'attack':z.hitTimer>0?'hit':walking?'walk':'idle';if((z.animationState==='attack'||z.animationState==='hit')&&z.currentAction?.isRunning())animState=z.animationState;setZombieAnimation(z,animState);z.mixer.update(dt);continue;}
   resetPose(p);
   if(walking){
    p.legL.rotation.x=sw*(z.type==='runner'?.95:.63);p.legR.rotation.x=counter*(z.type==='runner'?.95:.63);
