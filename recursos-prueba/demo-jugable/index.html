@@ -147,10 +147,10 @@ function solid(x,z,w,d,h,material,rot=0){
 function floor(x,z,w,d,material=M.ground,y=-.1){cube(world,w,.18,d,material,x,y,z,false);floorPlatforms.push({x,z,hx:w/2,hz:d/2,top:y+.09});}
 const viewWeapon=new THREE.Group();viewWeapon.position.set(.34,-.31,-.66);camera.add(viewWeapon);
 const knifeView=new THREE.Group();viewWeapon.add(knifeView);
-cube(knifeView,.16,.32,.13,mat('#4c4133'),.02,-.13,.02);cube(knifeView,.12,.13,.12,mat('#b78c6a'),.02,-.31,.005);
+cube(knifeView,.16,.32,.13,M.wood,.02,-.13,.02);cube(knifeView,.12,.13,.12,mat('#b78c6a'),.02,-.31,.005);
 const knifeBlade=cube(knifeView,.065,.31,.035,M.steel,.02,-.51,-.04);knifeBlade.rotation.z=-.13;cube(knifeView,.19,.045,.07,M.black,.02,-.36,.01);
 const pistolView=new THREE.Group();viewWeapon.add(pistolView);
-cube(pistolView,.17,.13,.30,mat('#303936'),.035,-.14,-.02);cube(pistolView,.13,.20,.12,mat('#454d49'),.035,-.27,.055);
+cube(pistolView,.17,.13,.30,M.metal,.035,-.14,-.02);cube(pistolView,.13,.20,.12,M.black,.035,-.27,.055);
 cube(pistolView,.085,.065,.32,M.steel,.035,-.105,-.24);cube(pistolView,.055,.06,.13,M.black,.035,-.105,-.46);
 cube(pistolView,.105,.055,.15,mat('#181e1c'),.035,-.20,-.03);cube(pistolView,.025,.035,.035,mat('#b8a06a'),.035,-.04,-.11);
 pistolView.visible=false;knifeView.visible=true;viewWeapon.visible=false;
@@ -487,7 +487,7 @@ function resetGame(){
  initAudio();
  zombies.forEach(z=>{world.remove(z.mesh);disposeGroup(z.mesh);});zombies.length=0;
  for(let i=loot.length-1;i>=0;i--){const l=loot[i];if(l.drop){world.remove(l.mesh);disposeGroup(l.mesh);loot.splice(i,1);}else{l.available=true;l.mesh.visible=true;}}
- if(actor){world.remove(actor);disposeGroup(actor);}player.x=13.35;player.z=11.35;player.yaw=-Math.PI/2;spawnGrace=4.0;stuckTimer=0;wakeElapsed=0;wakeScream1=false;wakeScream2=false;player.hp=100;player.stamina=100;player.hunger=100;player.thirst=100;player.dead=false;player.supplies=0;player.time=0;player.weapon='knife';player.pistolOwned=false;document.getElementById('attackButton').textContent='CUCHILLO';
+ if(actor){world.remove(actor);disposeGroup(actor);}player.x=13.35;player.z=11.35;player.y=0;player.yaw=-Math.PI/2;spawnGrace=4.0;stuckTimer=0;wakeElapsed=0;wakeScream1=false;wakeScream2=false;player.hp=100;player.stamina=100;player.hunger=100;player.thirst=100;player.dead=false;player.supplies=0;player.time=0;player.weapon='knife';player.pistolOwned=false;document.getElementById('attackButton').textContent='CUCHILLO';
  killCount=0;round=1;points=500;waveToSpawn=0;spawnClock=0;intermission=0;roundKills=0;openingSequence=4.8;roundHasStarted=false;stepTimer=0;alarmPlayed=false;cellGates.forEach(g=>{g.open=true;g.openAmount=1;g.mesh.position.z=g.baseZ+g.slideDistance;g.mesh.visible=false;});doors.forEach(d=>{d.open=false;d.openAmount=0;d.mesh.position.set(d.baseX,0,d.baseZ);d.mesh.rotation.y=d.rotation;d.mesh.visible=true;});attackTimer=0;attackCooldown=0;playerHitTimer=0;runningTouch=false;joyX=0;joyY=0;lookPointer=null;for(const k in keys)keys[k]=false;stickId=null;knob.style.transform='translate(0,0)';paused=false;ended=false;cameraYaw=0;cameraPitch=-.035;camera.position.set(13,.96,11);camera.lookAt(13,.96,10);viewWeapon.visible=false;
  makePlayer();spawnZombies();updateHud();document.getElementById('ending').style.display='none';document.getElementById('start').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('controls').style.display='none';document.getElementById('fullscreenButton').style.display='grid';document.getElementById('moveDiag').style.display='none';document.getElementById('wakeFade').style.opacity='1';document.getElementById('wakeCaption').style.opacity='1';document.getElementById('wakeCaption').textContent='... ¿QUÉ ESTÁ PASANDO?';running=true;message('Despiertas en tu celda…',2400);
 }
@@ -534,15 +534,15 @@ function relocateArmoryBox(){
  message('La caja de armas se ha trasladado a: '+p.zone+'.',2100);
 }
 function firePistol(){
- attackCooldown=.34;playSfx('pistol');player.yaw=cameraYaw;
+ attackCooldown=.34;attackTimer=.42;playSfx('pistol');player.yaw=cameraYaw;
  const fx=Math.sin(cameraYaw),fz=-Math.cos(cameraYaw);let target=null,best=27;
- for(const z of zombies){if(!z.alive)continue;const dx=z.x-player.x,dz=z.z-player.z,d=Math.hypot(dx,dz);if(d<1||d>best)continue;const dot=(dx/d)*fx+(dz/d)*fz;if(dot>.965){best=d;target=z;}}
+ for(const z of zombies){if(!z.alive||Math.abs((z.floorY||0)-(player.y||0))>1.55)continue;const dx=z.x-player.x,dz=z.z-player.z,d=Math.hypot(dx,dz);if(d<1||d>best)continue;const dot=(dx/d)*fx+(dz/d)*fz;if(dot>.965){best=d;target=z;}}
  const start=new THREE.Vector3(camera.position.x,camera.position.y-.12,camera.position.z);
  const end=target?new THREE.Vector3(target.x,1.15,target.z):new THREE.Vector3(start.x+fx*27,start.y-.12,start.z+fz*27);
  const geo=new THREE.BufferGeometry().setFromPoints([start,end]);const beam=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffd88a,transparent:true,opacity:.95}));scene.add(beam);fxEffects.push({object:beam,life:.075});
  const flash=new THREE.PointLight(0xffb54e,2.4,5,2);flash.position.copy(start);scene.add(flash);fxEffects.push({object:flash,life:.045,light:true});
  if(target){
-  target.hp-=25;spawnHitSparks(target.x,1.15,target.z);target.hitTimer=.22;target.hitSide=Math.sign(target.x-player.x)||1;
+  target.hp-=25;spawnHitSparks(target.x,(target.floorY||0)+1.15,target.z);target.hitTimer=.22;target.hitSide=Math.sign(target.x-player.x)||1;
   const dx=target.x-player.x;playSfx('hit',Math.max(-1,Math.min(1,dx/12)));
   if(target.hp<=0){target.alive=false;target.dying=true;target.deathTimer=0;target.deathSide=(Math.sign(dx)||1)*.8;killCount++;roundKills++;points+=100;playSfx('death',Math.max(-1,Math.min(1,dx/12)));message('Impacto confirmado · +100 puntos',900);}
  }else message('Disparo fallido.',500);
@@ -564,12 +564,12 @@ function attack(){
  const fx=Math.sin(player.yaw),fz=-Math.cos(player.yaw);
  let hitCount=0;
  for(const z of zombies){
-  if(!z.alive)continue;
+  if(!z.alive||Math.abs((z.floorY||0)-(player.y||0))>1.55)continue;
   const dx=z.x-player.x,dz=z.z-player.z,dist=Math.hypot(dx,dz);
   if(dist>2.55||dist<.001)continue;
   const dot=(dx/dist)*fx+(dz/dist)*fz;
   if(dot<.3)continue;
-  z.hp-=Math.round((z.type==='brute'?23:34)*(1+Math.min(.25,(round-1)*.015)));spawnHitSparks(z.x,1.15,z.z);hitCount++;z.hitTimer=.22;z.hitSide=Math.sign(dx)||1;playSfx('hit',Math.max(-1,Math.min(1,dx/12)));
+  z.hp-=Math.round((z.type==='brute'?23:34)*(1+Math.min(.25,(round-1)*.015)));spawnHitSparks(z.x,(z.floorY||0)+1.15,z.z);hitCount++;z.hitTimer=.22;z.hitSide=Math.sign(dx)||1;playSfx('hit',Math.max(-1,Math.min(1,dx/12)));
   z.mesh.position.x+=dx/dist*.25;z.mesh.position.z+=dz/dist*.25;z.x=z.mesh.position.x;z.z=z.mesh.position.z;
   if(z.hp<=0){
    z.alive=false;z.dying=true;z.deathTimer=0;z.deathSide=(Math.sign(dx)||1)*.8;killCount++;roundKills++;points+=100;
