@@ -16,3 +16,12 @@ GitHub no conserva carpetas vacías; por eso este README hace que la carpeta apa
 ## Probar animaciones sin servidor
 
 Abre el [Laboratorio de animaciones de Tekaym Online](https://misael546.github.io/TekaymOnline/recursos-prueba/demo-animaciones/). Es una página de prueba estática, independiente del servidor y la base de datos. Permite cambiar entre prototipos de supervivientes y zombis, reproducir reposo, caminar, correr, atacar, recibir golpes y morir, y cambiar el escenario de la prisión. Requiere conexión a internet para cargar el motor 3D del CDN.
+
+
+## Demo jugable sin servidor
+
+- [Abrir demo jugable de supervivencia en la prisión](https://misael546.github.io/TekaymOnline/recursos-prueba/demo-jugable/)
+- [Abrir laboratorio de personajes y animaciones](https://misael546.github.io/TekaymOnline/recursos-prueba/demo-animaciones/)
+- [Ver biblioteca de modelos 3D STL](modelos-3d/README.md)
+
+La demo jugable es una prueba aislada: movimiento, cuchillo, zombis, salud, resistencia, hambre, sed y recogida de suministros. No modifica el cliente oficial V1 y no usa cuentas, servidor ni base de datos. Ambos visores usan Three.js desde un CDN público.
