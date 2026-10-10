@@ -228,7 +228,13 @@ function actorMesh(type,isZombie=false){
  const sm=mat(skin),tm=mat(shirt),pm=mat(pants),hm=mat(hair),dark=mat('#262a26'),eye=mat(isZombie?'#d1ba71':'#ddd6c6'),steel=mat('#9ba7a2',.4,.7);
  const big=type==='brute'?1.28:type==='boss'?1.36:type==='runner'?.9:1;
  const torso=new THREE.Group();root.add(torso);torso.position.y=1.34;
- cube(torso,.61*big,.72*big,.34*big,tm,0,0,0);cube(torso,.51*big,.2*big,.36*big,tm,0,.29*big,0);
+ if(type==='female'){
+  cube(torso,.53,.54,.30,tm,0,.04,0);
+  cube(torso,.42,.22,.27,tm,0,-.22,0);
+  cube(torso,.59,.22,.34,pm,0,-.37,0);
+ }else{
+  cube(torso,.61*big,.72*big,.34*big,tm,0,0,0);cube(torso,.51*big,.2*big,.36*big,tm,0,.29*big,0);
+ }
  sph(torso,.23*big,sm,0,.57*big,0,10);sph(torso,.22*big,hm,0,.75*big,-.025,9);
  for(const s of [-1,1]){
   sph(torso,.035,eye,s*.082,.59*big,.2*big,7);
@@ -236,19 +242,37 @@ function actorMesh(type,isZombie=false){
  }
  if(isZombie){
   cube(torso,.14,.035,.025,dark,0,.47*big,.2*big);
-  sph(torso,.055,mat('#733e32'),-.13,.43*big,.18*big,6);
-  sph(torso,.05,mat('#743e32'),.12,.27*big,.18*big,6);
+  const woundMat=mat('#512823',.99),bruiseMat=mat('#302724',.99);
+  const wound=(points,z,material)=>{
+   const shape=new THREE.Shape();shape.moveTo(points[0][0],points[0][1]);
+   for(let i=1;i<points.length;i++)shape.lineTo(points[i][0],points[i][1]);
+   shape.closePath();const patch=new THREE.Mesh(new THREE.ShapeGeometry(shape),material);
+   patch.position.z=z;patch.material.side=THREE.DoubleSide;patch.castShadow=false;torso.add(patch);
+  };
+  // Irregular flat tears follow the torso face: no detached round blood blobs.
+  wound([[-.18,.33],[-.12,.39],[-.07,.32],[-.03,.28],[-.09,.25],[-.17,.27]],.173*big,woundMat);
+  wound([[.09,.10],[.16,.14],[.13,.07],[.19,.02],[.12,-.02],[.06,.035]],.173*big,bruiseMat);
+  if(type==='runner'||type==='brute'||type==='boss')wound([[-.26,.06],[-.2,.09],[-.17,.025],[-.21,-.05],[-.27,-.02]],.173*big,woundMat);
   if(type==='brute'||type==='boss'){sph(torso,.18,sm,-.30,.18,.02,7);sph(torso,.18,sm,.30,.18,.02,7);}
  }
  if(type==='soldier'){cube(torso,.52,.13,.45,mat('#42563d'),0,.8,0);cube(torso,.3,.08,.12,mat('#b5af8b'),0,.16,.20);}
- if(type==='female'){cube(torso,.44,.52,.16,hm,0,.37,-.14);}
+ if(type==='female'){
+  // Cap, longer back hair and ponytail sit around the head rather than on the chest.
+  sph(torso,.245,hm,0,.81,-.025,10);
+  cube(torso,.42,.42,.13,hm,0,.59,-.13);
+  cube(torso,.10,.39,.12,hm,0,.34,-.22);
+  sph(torso,.09,hm,.08,.27,-.235,7);
+  cube(torso,.12,.075,.34,mat('#b18a6d'),0,.30,.13);
+ }
  if(type==='scientist'||type==='doctor'){cube(torso,.47,.65,.065,tm,0,-.05,.19);cube(torso,.1,.12,.035,mat('#883c33'),.10,.10,.23);}
- const armL=limb(root,.46*big,.17*big,tm);armL.position.set(-.37*big,1.62*big,0);
- const armR=limb(root,.46*big,.17*big,tm);armR.position.set(.37*big,1.62*big,0);
+ const female=type==='female',armW=female?.145:.17,shoulder=female?.34:.37;
+ const armL=limb(root,.46*big,armW*big,tm);armL.position.set(-shoulder*big,1.62*big,0);
+ const armR=limb(root,.46*big,armW*big,tm);armR.position.set(shoulder*big,1.62*big,0);
  const foreL=limb(armL,.39*big,.135*big,tm);foreL.position.y=-.44*big;
  const foreR=limb(armR,.39*big,.135*big,tm);foreR.position.y=-.44*big;
- const legL=limb(root,.49*big,.21*big,pm);legL.position.set(-.17*big,.95*big,0);
- const legR=limb(root,.49*big,.21*big,pm);legR.position.set(.17*big,.95*big,0);
+ const legW=female?.235:.21,hipX=female?.19:.17;
+ const legL=limb(root,.49*big,legW*big,pm);legL.position.set(-hipX*big,.95*big,0);
+ const legR=limb(root,.49*big,legW*big,pm);legR.position.set(hipX*big,.95*big,0);
  const lowerL=limb(legL,.45*big,.16*big,pm);lowerL.position.y=-.48*big;
  const lowerR=limb(legR,.45*big,.16*big,pm);lowerR.position.y=-.48*big;
  cube(lowerL,.22,.13,.36,dark,0,-.44*big,.08);cube(lowerR,.22,.13,.36,dark,0,-.44*big,.08);
@@ -380,10 +404,23 @@ function updateZombies(dt,t){
    if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
   }
   const p=z.parts;resetPose(p);
-  const sw=Math.sin(z.phase);
-  p.legL.rotation.x=sw*.7;p.legR.rotation.x=-sw*.7;p.armL.rotation.x=-.25-sw*.35;p.armR.rotation.x=-.25+sw*.35;
-  if(z.type==='runner'){p.torso.rotation.x=.18;p.armL.rotation.x=-.65-sw*.4;p.armR.rotation.x=-.65+sw*.4;}
-  if(z.type==='brute'){p.armL.rotation.x=-.8;p.armR.rotation.x=-.8;p.torso.rotation.x=.06;}
+  const sw=Math.sin(z.phase),counter=Math.sin(z.phase+Math.PI);
+  const walking=d<30;
+  if(walking){
+   p.legL.rotation.x=sw*(z.type==='runner'?.95:.63);p.legR.rotation.x=counter*(z.type==='runner'?.95:.63);
+   p.lowerL.rotation.x=Math.max(0,-sw)*.68;p.lowerR.rotation.x=Math.max(0,-counter)*.68;
+   p.armL.rotation.x=-.28-counter*.48;p.armR.rotation.x=-.28-sw*.48;
+   p.foreL.rotation.x=-.2-Math.max(0,sw)*.22;p.foreR.rotation.x=-.2-Math.max(0,counter)*.22;
+   p.torso.rotation.x=z.type==='runner'?.22:z.type==='brute'?.08:.035;
+   p.torso.rotation.z=Math.sin(z.phase*.5)*(z.type==='brute'?.035:.055);
+   z.mesh.position.y=.015+Math.abs(Math.sin(z.phase*2))*(z.type==='runner'?.07:.027);
+  }else{
+   p.torso.rotation.x=Math.sin(z.phase*.5)*.025;
+   p.armL.rotation.x=-.24+Math.sin(z.phase*.7)*.04;p.armR.rotation.x=-.26-Math.sin(z.phase*.7)*.04;
+   z.mesh.position.y=.012+Math.sin(z.phase*1.7)*.012;
+  }
+  if(z.type==='runner'){p.torso.rotation.x+=.12;p.armL.rotation.x-=.3;p.armR.rotation.x-=.3;}
+  if(z.type==='brute'){p.armL.rotation.x=-.72+sw*.09;p.armR.rotation.x=-.72+counter*.09;p.torso.rotation.x+=.04;}
  }
 }
 function updateCamera(dt){
@@ -427,10 +464,31 @@ function frame(now){
   if(cameraMode==='third'&&actor.visible)actor.position.set(player.x,0,player.z);
   if(parts&&running&&!paused){
    resetPose(parts);
-   if(Math.abs(joyX)+Math.abs(joyY)>0.13||keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD){
-    const f=Math.sin(now/100);parts.legL.rotation.x=f*.48;parts.legR.rotation.x=-f*.48;parts.armL.rotation.x=-f*.25;parts.armR.rotation.x=-f*.25;
+   const moving=Math.abs(joyX)+Math.abs(joyY)>.13||keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD;
+   const t=now*.0085,sw=Math.sin(t),opposite=Math.sin(t+Math.PI);
+   if(moving){
+    parts.legL.rotation.x=sw*(runningTouch||keys.ShiftLeft||keys.ShiftRight?.92:.54);
+    parts.legR.rotation.x=opposite*(runningTouch||keys.ShiftLeft||keys.ShiftRight?.92:.54);
+    parts.lowerL.rotation.x=Math.max(0,-sw)*.55;parts.lowerR.rotation.x=Math.max(0,-opposite)*.55;
+    parts.armL.rotation.x=-opposite*.52;parts.armR.rotation.x=-sw*.52;
+    parts.foreL.rotation.x=-.2-Math.max(0,sw)*.25;parts.foreR.rotation.x=-.2-Math.max(0,opposite)*.25;
+    parts.torso.rotation.x=(runningTouch||keys.ShiftLeft||keys.ShiftRight)?-.12:.035;
+    parts.torso.rotation.z=Math.sin(t*.5)*.025;
+    if(parts.backpack){parts.backpack.rotation.x=Math.sin(t)*.035;parts.backpack.rotation.z=Math.sin(t*.5)*.02;}
+   }else{
+    parts.torso.rotation.x=.02+Math.sin(now*.0013)*.012;
+    parts.torso.rotation.z=Math.sin(now*.0008)*.009;
+    parts.armL.rotation.x=-.035+Math.sin(now*.0015)*.018;parts.armR.rotation.x=-.045-Math.sin(now*.0015)*.018;
+    parts.elbowL.rotation.x=-.08;parts.elbowR.rotation.x=-.1;
+    if(parts.backpack)parts.backpack.rotation.x=Math.sin(now*.0013)*.012;
    }
-   if(attackTimer>0)parts.armR.rotation.x=-1.1*(attackTimer/.42);
+   if(attackTimer>0){
+    const phase=1-attackTimer/.42;
+    const strike=Math.sin(Math.min(1,phase/.72)*Math.PI);
+    parts.armR.rotation.x=-1.15*strike;
+    parts.foreR.rotation.x=-.35-0.5*strike;
+    parts.torso.rotation.x-=.12*strike;
+   }
   }
   updateCamera(dt);
  }
