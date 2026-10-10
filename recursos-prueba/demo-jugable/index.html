@@ -115,7 +115,7 @@ const M={
  steel:mat('#abb8b5',.4,.75),grass:mat('#596149'),white:mat('#b8bfaf')
 };
 const world=new THREE.Group();scene.add(world);
-const colliders=[],zombies=[],loot=[],doors=[];
+const colliders=[],zombies=[],loot=[],doors=[],flickerLights=[];
 let running=false,ended=false,paused=false,killCount=0,lastTime=performance.now(),messageUntil=0;
 let round=1,points=500,waveToSpawn=0,spawnClock=0,intermission=0,roundKills=0;
 let actor=null,parts=null,cameraYaw=0,cameraPitch=.23,cameraDist=5.7,cameraMode='third',attackTimer=0,attackCooldown=0,flashTime=0,playerHitTimer=0;
@@ -243,7 +243,7 @@ function createWorld(){
  const boxPositions=[[-6,14],[6,33],[-13,44],[14,15],[-14,-14],[13,-18],[34,-4],[48,7],[-34,-4],[-48,7]];
  for(const [x,z] of boxPositions){const g=new THREE.Group();g.position.set(x,0,z);world.add(g);cube(g,1.15,.85,.95,M.crate,0,.43,0);cube(g,1.22,.12,1.02,M.wood,0,.87,0);cube(g,.16,.9,.07,M.metal,0,.43,.5);loot.push({x,z,mesh:g,available:true});}
  for(const [x,z] of [[-16,7],[16,7],[-16,27],[16,27],[-16,46],[16,46],[0,-26],[0,-1],[30,-23],[50,-23],[-50,-23],[-30,-23]]){
-  cube(world,.18,.18,.18,M.light,x,4.8,z,false);const lamp=new THREE.PointLight(0xd6c49a,.5,10,2);lamp.position.set(x,4.4,z);world.add(lamp);
+  cube(world,.18,.18,.18,M.light,x,4.8,z,false);const lamp=new THREE.PointLight(0xd6c49a,.5,10,2);lamp.position.set(x,4.4,z);world.add(lamp);flickerLights.push({light:lamp,base:.5,phase:Math.random()*6.28});
  }
 }
 
@@ -337,7 +337,7 @@ function spawnOneZombie(zone){
  const choices=zoneInfo[zone].spawns,spawn=choices[Math.floor(Math.random()*choices.length)],r=Math.random();
  const type=r<.17?'runner':r<.28?'brute':r<.38?'guard':r<.48?'doctor':'prisoner';
  const mesh=actorMesh(type,true);mesh.position.set(spawn[0],0,spawn[1]);world.add(mesh);
- const z={mesh,parts:mesh.userData.parts,x:spawn[0],z:spawn[1],type,hp:type==='brute'?82:type==='runner'?38:52,attackCd:.4+Math.random(),phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:Math.random()<.5?-1:1,hitTimer:0,hitSide:1,facingYaw:Math.atan2(player.x-spawn[0],player.z-spawn[1]),id:performance.now()+Math.random(),zone};
+ const z={mesh,parts:mesh.userData.parts,x:spawn[0],z:spawn[1],type,hp:type==='brute'?82:type==='runner'?38:52,attackCd:.4+Math.random(),phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:Math.random()<.5?-1:1,hitTimer:0,hitSide:1,facingYaw:Math.atan2(player.x-spawn[0],player.z-spawn[1]),id:performance.now()+Math.random(),zone,attackAnim:0};
  mesh.rotation.y=z.facingYaw;zombies.push(z);
 }
 function beginRound(n){round=n;roundKills=0;waveToSpawn=5+n*2;spawnClock=.15;intermission=0;message('RONDA '+round+' · '+waveToSpawn+' infectados detectados',2400);updateHud();}
@@ -471,7 +471,7 @@ function updateZombies(dt,t){
    if(!collide(z.x,nz,.36))z.z=nz;
    z.mesh.position.x=z.x;z.mesh.position.z=z.z;z.zone=currentZone(z.x,z.z);const targetYaw=Math.atan2(dx,dz),yawDelta=Math.atan2(Math.sin(targetYaw-z.mesh.rotation.y),Math.cos(targetYaw-z.mesh.rotation.y));z.mesh.rotation.y+=yawDelta*(1-Math.exp(-9*dt));z.facingYaw=z.mesh.rotation.y;
   }else if(fromZone===playerZone&&d<=1.4&&z.attackCd<=0){
-   z.attackCd=1.3;player.hp=Math.max(0,player.hp-(z.type==='brute'?14:8));flashTime=.22;playerHitTimer=.28;
+   z.attackCd=1.3;z.attackAnim=.34;player.hp=Math.max(0,player.hp-(z.type==='brute'?14:8));flashTime=.22;playerHitTimer=.28;
    message(z.type==='brute'?'¡El bruto te golpeó!':'¡Un infectado te golpeó!',700);updateHud();
    if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
   }
@@ -492,6 +492,7 @@ function updateZombies(dt,t){
   }
   if(z.type==='runner'){p.torso.rotation.x+=.12;p.armL.rotation.x-=.3;p.armR.rotation.x-=.3;}
   if(z.type==='brute'){p.armL.rotation.x=-.72+sw*.09;p.armR.rotation.x=-.72+counter*.09;p.torso.rotation.x+=.04;}
+  if(z.attackAnim>0){z.attackAnim=Math.max(0,z.attackAnim-dt);const strike=Math.sin((1-z.attackAnim/.34)*Math.PI);p.torso.rotation.x-=.24*strike;p.armL.rotation.x=-.65*strike;p.armR.rotation.x=-.92*strike;p.foreL.rotation.x=-.3*strike;p.foreR.rotation.x=-.38*strike;}
   if(z.hitTimer>0){
    z.hitTimer=Math.max(0,z.hitTimer-dt);const impact=z.hitTimer/.22;
    p.torso.rotation.x-=.24*impact;p.torso.rotation.z+=(z.hitSide||1)*.17*impact;
@@ -533,6 +534,7 @@ function frame(now){
  if(running&&!paused){
   updatePlayer(dt,now);updateZombies(dt,now);updateInteractHint();
   for(const d of doors){const target=d.open?1:0;d.openAmount+=(target-d.openAmount)*(1-Math.exp(-5.5*dt));d.mesh.rotation.y=d.rotation+Math.PI*.48*d.openAmount;}
+  for(const f of flickerLights){const wave=Math.sin(now*.012+f.phase),flicker=Math.sin(now*.057+f.phase*2);f.light.intensity=f.base*(.86+.12*wave+.035*flicker);}
   if(now%140<35)updateHud();
  }
  if(actor){
