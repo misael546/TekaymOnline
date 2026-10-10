@@ -87,6 +87,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 </div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import { clone as cloneSkeleton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js';
 
 const canvas=document.getElementById('game');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
@@ -107,6 +109,72 @@ const M={
  steel:mat('#abb8b5',.4,.75),grass:mat('#596149'),white:mat('#b8bfaf')
 };
 const world=new THREE.Group();scene.add(world);
+// Modelo humanoide externo de Quaternius Zombie Apocalypse Kit (CC0 1.0).
+// Se carga como GLB riggeado; el fallback procedural solo se usa si falla la red.
+const ZOMBIE_MODEL_URL='https://raw.githubusercontent.com/mars-tw/storm-apocalypse/main/public/models/zombie.glb';
+const zombieAssetLoader=new GLTFLoader();
+let zombieAsset=null,zombieAssetReady=false,zombieAssetFailed=false;
+function loadZombieAsset(){
+ zombieAssetLoader.load(ZOMBIE_MODEL_URL,gltf=>{
+  zombieAsset=gltf;zombieAssetReady=true;
+  console.info('[Tekaym] Modelo GLB de infectado cargado:',gltf.animations.map(a=>a.name));
+ },error=>{
+  zombieAssetFailed=true;zombieAssetReady=true;
+  console.warn('[Tekaym] No se pudo cargar el GLB; se activa el modo de compatibilidad.',error);
+ });
+}
+function zombieAnimationMap(mixer,clips){
+ const actions={};
+ const rules={idle:/idle|breath|stand|wait|rest/i,walk:/walk|run|move|locomotion/i,attack:/attack|bite|claw|punch/i,hit:/hit|hurt|damage|react/i,dead:/dead|death|die|fall/i};
+ for(const [state,pattern] of Object.entries(rules)){
+  const clip=clips.find(c=>pattern.test(c.name));
+  if(clip)actions[state]=mixer.clipAction(clip);
+ }
+ if(clips.length&&!actions.idle)actions.idle=mixer.clipAction(clips[0]);
+ if(clips.length&&!actions.walk)actions.walk=actions.idle;
+ if(clips.length&&!actions.attack)actions.attack=actions.idle;
+ if(clips.length&&!actions.hit)actions.hit=actions.attack;
+ return actions;
+}
+function setZombieAnimation(z,state){
+ if(!z.mixer||!z.actions)return;
+ let action=z.actions[state]||z.actions.idle||z.actions.walk;
+ if(!action)return;
+ if(z.currentAction===action&&z.animationState===state)return;
+ if(z.currentAction&&z.currentAction!==action)z.currentAction.fadeOut(.12);
+ action.reset();action.enabled=true;action.setEffectiveWeight(1);
+ action.setEffectiveTimeScale(state==='walk'&&z.type==='runner'?1.18:state==='walk'&&z.type==='brute'?.78:1);
+ action.clampWhenFinished=['attack','hit','dead'].includes(state);
+ action.setLoop(action.clampWhenFinished?THREE.LoopOnce:THREE.LoopRepeat,action.clampWhenFinished?1:Infinity);
+ action.fadeIn(.12).play();z.currentAction=action;z.animationState=state;
+}
+function externalZombieMesh(type){
+ const root=new THREE.Group(),model=cloneSkeleton(zombieAsset.scene);
+ const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
+ const desiredHeight=type==='boss'?2.55:type==='brute'?2.25:type==='runner'?1.78:1.92;
+ const scale=desiredHeight/Math.max(.001,size.y);
+ const shape=type==='runner'?[.83,.98,.86]:type==='brute'?[1.2,1.05,1.15]:type==='boss'?[1.34,1.13,1.28]:[1,1,1];
+ model.scale.set(scale*shape[0],scale*shape[1],scale*shape[2]);
+ model.position.y=-bounds.min.y*scale*shape[1];
+ const tint=type==='boss'?'#77745c':type==='brute'?'#9a9b75':type==='runner'?'#b4aa8b':type==='doctor'?'#b4c0a9':type==='guard'?'#8b9b7c':'#ffffff';
+ model.traverse(o=>{
+  if(!o.isMesh)return;
+  o.castShadow=true;o.receiveShadow=true;
+  if(Array.isArray(o.material))o.material=o.material.map(m=>m.clone());
+  else if(o.material)o.material=o.material.clone();
+  for(const m of (Array.isArray(o.material)?o.material:[o.material])){
+   if(!m)continue;
+   if(m.color)m.color.multiply(new THREE.Color(tint));
+   if('roughness' in m)m.roughness=Math.max(.68,m.roughness||.68);
+   if('metalness' in m)m.metalness=0;
+  }
+ });
+ root.add(model);root.userData.externalZombie=true;root.userData.parts=null;
+ root.userData.mixer=new THREE.AnimationMixer(model);
+ root.userData.actions=zombieAnimationMap(root.userData.mixer,zombieAsset.animations||[]);
+ root.userData.model=model;
+ return root;
+}
 const colliders=[],zombies=[],loot=[],doors=[],flickerLights=[],cellGates=[];
 let running=false,ended=false,paused=false,killCount=0,lastTime=performance.now(),messageUntil=0;
 let round=1,points=500,waveToSpawn=0,spawnClock=0,intermission=0,roundKills=0;
@@ -314,6 +382,7 @@ function limb(parent,len,width,material){
  const g=new THREE.Group();parent.add(g);cube(g,width,len,width,material,0,-len/2,0);sph(g,width*.53,material,0,-len,0,7);return g;
 }
 function actorMesh(type,isZombie=false){
+ if(isZombie&&zombieAsset)return externalZombieMesh(type);
  const root=new THREE.Group();const spec=type;
  let skin='#ba8d6b',shirt='#4c6248',pants='#3a4540',hair='#332c24';
  if(type==='civil'){skin='#c19273';shirt='#566b76';pants='#464a4b';hair='#473328';}
@@ -384,7 +453,7 @@ function actorMesh(type,isZombie=false){
  return root;
 }
 function resetPose(p){p.torso.rotation.set(0,0,0);for(const k of ['armL','armR','foreL','foreR','legL','legR','lowerL','lowerR'])p[k].rotation.set(0,0,0);}
-function disposeGroup(g){g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&o.material.dispose)o.material.dispose();});}
+function disposeGroup(g){g.traverse(o=>{if(o.geometry&&!g.userData.externalZombie)o.geometry.dispose();if(o.material&&o.material.dispose)o.material.dispose();});}
 function currentZone(x=player.x,z=player.z){if(x>22&&z>-25&&z<19)return 'infirmary';if(x< -22&&z>-25&&z<19)return 'workshop';if(z>5&&Math.abs(x)<21)return 'cells';return 'cafeteria';}
 function nextZoneDoor(from,to){
  if(from===to)return null;const queue=[[from,null]],seen=new Set([from]);
@@ -400,9 +469,9 @@ function spawnOneZombie(zone){
  const choices=zoneInfo[zone].spawns,spawn=choices[Math.floor(Math.random()*choices.length)],r=Math.random();
  const type=round>=7&&r<Math.min(.12,.025+(round-7)*.006)?'boss':r<Math.min(.42,.17+(round-1)*.012)?'runner':r<Math.min(.62,.28+(round-1)*.018)?'brute':r<.75?'guard':r<.86?'doctor':'prisoner';
  const mesh=actorMesh(type,true);mesh.position.set(spawn[0],0,spawn[1]);world.add(mesh);const roundScale=1+Math.max(0,round-1)*.16;if(round>=4&&Math.random()<Math.min(.35,(round-2)*.025))mesh.scale.setScalar(1.08+Math.min(.12,round*.004));
- if(round>=3){const torso=mesh.userData.parts.torso;const mutation=mat(round>=7?'#373b32':'#4a493c');const bone=mat('#b1aa8b');for(const s of [-1,1]){sph(torso,.055,mat('#e6a54f',.3),s*.082,.59,.232,7);if(round>=4)cyl(torso,.075,.025,.28,bone,s*.31,.25,.03,6);}if(round>=5){cube(torso,.15,.32,.08,mutation,-.24,-.12,.16);cube(torso,.12,.22,.07,mutation,.25,.08,.17);}if(round>=7){for(let k=0;k<3;k++)cyl(torso,.11,.025,.36,bone,-.2+k*.2,.38,-.08,5);sph(torso,.12,mat('#4b1715',.85),-.12,.18,.18,7);}}
- const z={mesh,parts:mesh.userData.parts,x:spawn[0],z:spawn[1],type,hp:Math.round((type==='boss'?260:type==='brute'?82:type==='runner'?38:52)*roundScale),speedScale:type==='boss'?Math.max(.8,1+Math.min(.45,(round-1)*.025)-.25):1+Math.min(.45,(round-1)*.025),attackCd:.4+Math.random(),phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:Math.random()<.5?-1:1,hitTimer:0,hitSide:1,facingYaw:Math.atan2(player.x-spawn[0],player.z-spawn[1]),id:performance.now()+Math.random(),zone,attackAnim:0,groanTimer:3+Math.random()*5};
- mesh.rotation.y=z.facingYaw;zombies.push(z);
+ if(round>=3&&mesh.userData.parts?.torso){const torso=mesh.userData.parts.torso;const mutation=mat(round>=7?'#373b32':'#4a493c');const bone=mat('#b1aa8b');for(const side of [-1,1]){sph(torso,.055,mat('#e6a54f',.3),side*.082,.59,.232,7);if(round>=4)cyl(torso,.075,.025,.28,bone,side*.31,.25,.03,6);}if(round>=5){cube(torso,.15,.32,.08,mutation,-.24,-.12,.16);cube(torso,.12,.22,.07,mutation,.25,.08,.17);}if(round>=7){for(let k=0;k<3;k++)cyl(torso,.11,.025,.36,bone,-.2+k*.2,.38,-.08,5);sph(torso,.12,mat('#4b1715',.85),-.12,.18,.18,7);}}
+ const z={mesh,parts:mesh.userData.parts,mixer:mesh.userData.mixer||null,actions:mesh.userData.actions||null,currentAction:null,animationState:'',x:spawn[0],z:spawn[1],type,hp:Math.round((type==='boss'?260:type==='brute'?82:type==='runner'?38:52)*roundScale),speedScale:type==='boss'?Math.max(.8,1+Math.min(.45,(round-1)*.025)-.25):1+Math.min(.45,(round-1)*.025),attackCd:.4+Math.random(),phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:Math.random()<.5?-1:1,hitTimer:0,hitSide:1,facingYaw:Math.atan2(player.x-spawn[0],player.z-spawn[1]),id:performance.now()+Math.random(),zone,attackAnim:0,groanTimer:3+Math.random()*5};
+ mesh.rotation.y=z.facingYaw;zombies.push(z);if(z.mixer)setZombieAnimation(z,'idle');
 }
 function beginRound(n){round=n;roundKills=0;waveToSpawn=Math.min(42,5+n*2);spawnClock=.65;intermission=0;roundHasStarted=true;playSfx('round');message('RONDA '+round+' · '+waveToSpawn+' infectados',3000);updateHud();}
 function spawnZombies(){waveToSpawn=0;roundHasStarted=false;}
@@ -446,7 +515,7 @@ function attack(){
   z.hp-=Math.round((z.type==='brute'?23:34)*(1+Math.min(.25,(round-1)*.015)));hitCount++;z.hitTimer=.22;z.hitSide=Math.sign(dx)||1;playSfx('hit',Math.max(-1,Math.min(1,dx/12)));
   z.mesh.position.x+=dx/dist*.25;z.mesh.position.z+=dz/dist*.25;z.x=z.mesh.position.x;z.z=z.mesh.position.z;
   if(z.hp<=0){
-   z.alive=false;z.dying=true;z.deathTimer=0;z.deathSide=(Math.sign(dx)||1)*.8;killCount++;roundKills++;points+=100;
+   z.alive=false;z.dying=true;z.deathTimer=0;z.deathSide=(Math.sign(dx)||1)*.8;if(z.mixer)setZombieAnimation(z,'dead');killCount++;roundKills++;points+=100;
    if(Math.random()<.62){
     const g=new THREE.Group();g.position.set(z.x,0,z.z);world.add(g);
     cube(g,.5,.3,.5,M.crate,0,.18,0);cube(g,.56,.07,.54,M.wood,0,.35,0);
@@ -520,13 +589,14 @@ function updatePlayer(dt,t){
 function updateZombies(dt,t){
  if(!running||paused||ended)return;
  if(openingSequence>0){wakeElapsed+=dt;if(!alarmPlayed&&wakeElapsed>=.55){playSfx('alarm');alarmPlayed=true;}if(!wakeScream1&&wakeElapsed>=.8){playScream(-.72);wakeScream1=true;}if(!wakeScream2&&wakeElapsed>=2.65){playScream(.7);wakeScream2=true;}const caption=document.getElementById('wakeCaption'),fade=document.getElementById('wakeFade');if(caption){caption.textContent=wakeElapsed<2.2?'... DESPERTANDO EN LA CELDA ...':wakeElapsed<4.8?'¡GRITOS EN EL BLOQUE!':'LAS CELDAS SE ESTÁN ABRIENDO';caption.style.opacity=wakeElapsed>7.2?'0':'1';}if(fade)fade.style.opacity=wakeElapsed<.35?String(1-wakeElapsed/.35):'0';for(const g of cellGates){if(g.level!==0||g.open)continue;const ownCell=g.side===1&&Math.abs(g.z-11)<1;const delay=ownCell?2.8:.6+(g.sequenceIndex%9)*.22;if(wakeElapsed>=delay){g.open=true;playSfx('gate',Math.max(-1,Math.min(1,g.x/24)));}}openingSequence=Math.max(0,openingSequence-dt);if(openingSequence<=0&&!roundHasStarted){for(const g of cellGates){g.open=true;g.openAmount=1;g.mesh.rotation.y=g.side*1.25;}document.getElementById('wakeCaption').style.opacity='0';document.getElementById('wakeFade').style.opacity='0';document.getElementById('hud').style.display='block';document.getElementById('controls').style.display='block';document.getElementById('moveDiag').style.display='block';cameraYaw=-Math.PI/2;cameraPitch=.03;viewWeapon.visible=true;beginRound(1);}}
- if(roundHasStarted&&waveToSpawn>0){spawnClock-=dt;if(spawnClock<=0){const zones=accessibleZones();const zone=zones[Math.floor(Math.random()*zones.length)]||'cells';spawnOneZombie(zone);waveToSpawn--;spawnClock=Math.max(.5,1.2-round*.018);updateHud();}}
+ if(roundHasStarted&&waveToSpawn>0){spawnClock-=dt;if(spawnClock<=0){if(!zombieAssetReady){spawnClock=.25;}else{const zones=accessibleZones();const zone=zones[Math.floor(Math.random()*zones.length)]||'cells';spawnOneZombie(zone);waveToSpawn--;spawnClock=Math.max(.5,1.2-round*.018);updateHud();}}}
  const active=zombies.filter(z=>z.alive).length;
  if(roundHasStarted&&openingSequence<=0&&waveToSpawn===0&&active===0){if(intermission<=0)intermission=4;else{intermission-=dt;if(intermission<=0)beginRound(round+1);}}
  for(const z of zombies){
   const p=z.parts;
   if(z.dying){
    z.deathTimer+=dt;
+   if(z.mixer){z.mixer.update(dt);if(!z.actions?.dead){const u=Math.max(0,Math.min(1,z.deathTimer/1.05));z.mesh.rotation.z=z.deathSide*1.28*(u*u*(3-2*u));z.mesh.position.y=-.12*(u*u*(3-2*u));}if(z.deathTimer>=1.05){world.remove(z.mesh);disposeGroup(z.mesh);z.dying=false;z.removed=true;}continue;}
    const u=Math.max(0,Math.min(1,z.deathTimer/1.05)),fall=u*u*(3-2*u);
    resetPose(p);
    p.torso.rotation.x=.72*fall;p.armL.rotation.x=.9*fall;p.armR.rotation.x=.78*fall;
@@ -556,6 +626,7 @@ function updateZombies(dt,t){
    if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
   }
   const sw=Math.sin(z.phase),counter=Math.sin(z.phase+Math.PI),walking=d>1.3&&d<30;
+  if(z.mixer){if(z.attackAnim>0)z.attackAnim=Math.max(0,z.attackAnim-dt);if(z.hitTimer>0)z.hitTimer=Math.max(0,z.hitTimer-dt);const animState=z.attackAnim>0?'attack':z.hitTimer>0?'hit':walking?'walk':'idle';setZombieAnimation(z,animState);z.mixer.update(dt);continue;}
   resetPose(p);
   if(walking){
    p.legL.rotation.x=sw*(z.type==='runner'?.95:.63);p.legR.rotation.x=counter*(z.type==='runner'?.95:.63);
@@ -640,7 +711,7 @@ function frame(now){
  const diag=document.getElementById('moveDiag');if(diag&&running){diag.textContent='POS '+player.x.toFixed(1)+','+player.z.toFixed(1)+' · JOY '+joyX.toFixed(1)+','+joyY.toFixed(1)+' · TECLAS '+((keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD)?'SI':'NO')+' · '+(stuckTimer>0?'REVISANDO':'ACTIVO');}
  renderer.render(scene,camera);
 }
-createWorld();makePlayer();spawnZombies();actor.visible=false;viewWeapon.visible=true;
+loadZombieAsset();createWorld();makePlayer();spawnZombies();actor.visible=false;viewWeapon.visible=true;
 camera.position.set(13,1.62,11);camera.lookAt(12,1.62,11);
 requestAnimationFrame(frame);
 document.getElementById('play').addEventListener('click',resetGame);
