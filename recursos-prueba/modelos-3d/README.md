@@ -37,3 +37,14 @@ Prototipos low-poly en formato STL para previsualización 3D en GitHub. Abre cad
 
 ## Estado
 Son prototipos geométricos iniciales. Aún no incluyen texturas, materiales finales, rigging, animaciones ni colisiones optimizadas; deben revisarse y detallarse antes de integrarlos. Ningún recurso se carga automáticamente al juego. Todo permanece dentro de `recursos-prueba/`, separado de DarkPixel Online.
+
+
+## Visor interactivo y modelos OBJ
+- **[Abrir el visor 3D](./index.html)** — rota y acerca los modelos desde navegador.
+- [Zombi prisionero OBJ](./zombie-prisionero.obj)
+- [Cuchillo de supervivencia OBJ](./cuchillo-supervivencia.obj)
+- [Puerta de celda OBJ](./puerta-celda.obj)
+- [Litera de prisión OBJ](./litera-prision.obj)
+- [Materiales compartidos MTL](./tekaym_materiales.mtl)
+
+Estos OBJ son mallas 3D estáticas originales con grupos de geometría y materiales separados. La entrega aún no incluye texturas bitmap dedicadas, UVs finales ni esqueletos/animaciones; hay que revisar el resultado visual en el visor y pulirlo antes de integrarlo en la demo.
