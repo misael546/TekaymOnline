@@ -39,6 +39,20 @@ jobs:
           test -f worker/wrangler.jsonc
           test -f firestore.rules
           echo 'Tekaym structure OK'
+      - name: Validate offline playable demo JavaScript
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('recursos-prueba/demo-jugable/index.html', 'utf8');
+          const script = html.match(/<script type="module">([\\s\\S]*?)<\\/script>/);
+          if (!script) throw new Error('Playable demo module not found');
+          for (const id of ['play','attackButton','stickBase','cameraToggle','map']) {
+            if (!html.includes('id="' + id + '"')) throw new Error('Demo control missing: ' + id);
+          }
+          fs.writeFileSync('/tmp/tekaym-demo.mjs', script[1]);
+          console.log('Playable demo structure OK');
+          NODE
+          node --check /tmp/tekaym-demo.mjs
       - name: Check isolation
         run: |
           if git grep -nE 'DarkPixel|neon_core|neon_release|neon_force|neon_reload|serverVersion|SERVER_VERSION|Belmo' -- ':!README.md' ':!docs/**' ':!recursos-prueba/**' ':!.github/workflows/tekaym-validation.yml'; then
