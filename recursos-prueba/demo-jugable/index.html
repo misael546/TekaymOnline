@@ -35,7 +35,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 .touchBtn.attack{width:78px;height:78px;background:#4b2925eF;border-color:#9a6054;font-size:11px}
 .touchBtn.run{width:58px;height:58px;background:#283841ed;border-color:#617d83}
 #interactButton{display:none;position:absolute;right:105px;bottom:58px;padding:13px 14px;border-radius:10px;border:1px solid #97895c;background:#343225ed;color:#fff;font-size:10px;font-weight:900;pointer-events:auto;touch-action:none}
-#pause{position:absolute;right:12px;top:142px;padding:9px 10px;pointer-events:auto;font-size:10px;color:#eee;background:#101715dd;border:1px solid #48564b;border-radius:8px}
+#cameraToggle{position:absolute;right:12px;top:142px;padding:9px 10px;pointer-events:auto;font-size:10px;color:#eee;background:#101715dd;border:1px solid #48564b;border-radius:8px}
+#pause{position:absolute;right:12px;top:186px;padding:9px 10px;pointer-events:auto;font-size:10px;color:#eee;background:#101715dd;border:1px solid #48564b;border-radius:8px}
 #flash{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;background:#b52a241f;box-shadow:inset 0 0 110px #d21d1d00}
 @media(max-width:720px){
  #stats{left:7px;top:7px;width:186px;padding:8px;gap:6px}
@@ -47,6 +48,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
  #touchActions{right:14px;bottom:15px;gap:8px}
  .touchBtn.attack{width:68px;height:68px}.touchBtn{width:59px;height:59px}.touchBtn.run{width:50px;height:50px}
  #interactButton{right:87px;bottom:53px;padding:11px}
+ #cameraToggle{right:8px;top:135px}
+ #pause{right:8px;top:177px}
  .card{padding:21px}
 }
 </style>
@@ -63,13 +66,13 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
  <div id="objective" class="panel">OBJETIVO · Elimina 8 zombis y llega al portón norte para escapar.</div>
  <div id="rightHud"><div id="counter" class="panel">ZOMBIS: <span id="kills">0</span> / 8</div><canvas id="map" width="248" height="248" title="Minimapa"></canvas></div>
  <div id="crosshair">+</div><div id="message" class="panel"></div>
- <div id="desktopTip" class="panel">WASD moverse · Shift correr · Clic/espacio atacar · E revisar suministros · Arrastra para mirar</div>
+ <div id="desktopTip" class="panel">WASD moverse · Shift correr · Clic/espacio atacar · E suministros · V cambiar cámara · Arrastra para mirar</div>
 </div>
 <div id="controls">
  <div id="stickBase"><div id="stickKnob"></div></div>
  <div id="touchActions"><button id="attackButton" class="touchBtn attack">CUCHILLO</button><button id="runButton" class="touchBtn run">CORRER</button></div>
  <button id="interactButton">REVISAR</button>
- <button id="pause">PAUSAR</button>
+ <button id="cameraToggle">VISTA: TERCERA</button><button id="pause">PAUSAR</button>
 </div>
 <div id="flash"></div>
 <div id="start">
@@ -115,7 +118,7 @@ const world=new THREE.Group();scene.add(world);
 const colliders=[],zombies=[],loot=[];
 let running=false,ended=false,paused=false,killCount=0,lastTime=performance.now(),messageUntil=0;
 let actor=null,parts=null,cameraYaw=0,cameraPitch=.23,cameraDist=5.7,cameraMode='third',attackTimer=0,attackCooldown=0,flashTime=0;
-const keys={};let joyX=0,joyY=0,lookPointer=null,lastPX=0,lastPY=0,runningTouch=false;
+const keys={};let joyX=0,joyY=0,lookPointer=null,lastPX=0,lastPY=0,lookStartX=0,lookStartY=0,runningTouch=false;
 const player={x:0,z:43,yaw:0,hp:100,stamina:100,hunger:100,thirst:100,dead:false,supplies:0,time:0};
 const reqKills=8,goal={kills:0};
 function cube(parent,w,h,d,material,x,y,z,cast=true){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=cast;o.receiveShadow=true;parent.add(o);return o;}
@@ -126,6 +129,8 @@ function solid(x,z,w,d,h,material,rot=0){
  const c={x,z,hx:w/2,hz:d/2,rot};colliders.push(c);return o;
 }
 function floor(x,z,w,d,material=M.ground){cube(world,w,.18,d,material,x,-.1,z,false);}
+const viewWeapon=new THREE.Group();viewWeapon.position.set(.35,-.32,-.7);camera.add(viewWeapon);
+cube(viewWeapon,.13,.34,.12,mat('#58634c'),.06,-.02,0);cube(viewWeapon,.085,.15,.10,mat('#b78c6a'),.06,-.19,-.015);cube(viewWeapon,.045,.23,.035,M.steel,.06,-.36,-.06);cube(viewWeapon,.13,.035,.05,M.black,.06,-.26,-.02);viewWeapon.visible=false;
 function putBench(x,z,rot=0){
  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;world.add(g);
  cube(g,2.1,.15,.65,M.wood,0,.72,0);for(const s of [-.8,.8]){cube(g,.12,.7,.12,M.rust,s,.35,-.2);cube(g,.12,.7,.12,M.rust,s,.35,.2);}
@@ -187,7 +192,7 @@ function createWorld(){
  addRoom(-34,-28,22,19,'cells');addRoom(34,-28,22,19,'cells');
  addRoom(-34,3,22,16,'cafeteria');addRoom(34,4,21,15,'infirmary');
  addRoom(-34,32,18,12,'showers');addRoom(34,32,21,13,'workshop');
- addRoom(0,-44,17,10,'lab');
+ addRoom(-14,-45,17,10,'lab');
  // Exterior covered walkway and guard positions
  for(const x of [-49,49]){solid(x,0,.65,94,5.7,M.shadow);for(let z=-50;z<=50;z+=13)cube(world,1.1,6,1.1,M.concrete,x,3,z);}
  for(const z of [-20,0,20,39]){putBench(-9,z,.1);putBench(9,z,-.1);}
@@ -196,7 +201,7 @@ function createWorld(){
  // gate marker, striped extraction pad
  floor(0,-54,10,5,M.warn);for(let x=-4;x<=4;x+=2)cube(world,.45,.025,4.3,M.black,x,-.005,-54,false);
  // supply boxes
- const boxPositions=[[-12,22],[13,25],[-13,-8],[14,-13],[0,-34],[-43,4],[43,10],[0,18]];
+ const boxPositions=[[-12,22],[13,25],[-13,-8],[14,-13],[0,-34],[-48,4],[48,10],[0,18]];
  for(const [x,z] of boxPositions){
   const g=new THREE.Group();g.position.set(x,0,z);world.add(g);
   cube(g,1.1,.85,.9,M.crate,0,.43,0);cube(g,1.18,.12,.97,M.wood,0,.86,0);cube(g,.16,.89,.07,M.metal,0,.43,.48);
@@ -263,16 +268,16 @@ function spawnZombies(){
  const list=[
   [-18,-43,'guard'],[18,-42,'prisoner'],[-18,-7,'runner'],[18,-9,'prisoner'],
   [-11,9,'scientist'],[12,12,'doctor'],[-22,25,'runner'],[22,25,'brute'],
-  [-43,10,'prisoner'],[44,16,'guard'],[-13,42,'prisoner'],[14,42,'runner']
+  [-47,10,'prisoner'],[47,16,'guard'],[-13,42,'prisoner'],[14,42,'runner']
  ];
  list.forEach((v,i)=>{const mesh=actorMesh(v[2],true);mesh.position.set(v[0],0,v[1]);world.add(mesh);zombies.push({mesh,parts:mesh.userData.parts,x:v[0],z:v[1],type:v[2],hp:v[2]==='brute'?65:v[2]==='runner'?30:40,attackCd:Math.random()*.6,phase:Math.random()*6.28,alive:true,id:i});});
 }
 function makePlayer(){actor=actorMesh('soldier',false);parts=actor.userData.parts;actor.position.set(player.x,0,player.z);world.add(actor);}
 function resetGame(){
  zombies.forEach(z=>{world.remove(z.mesh);disposeGroup(z.mesh);});zombies.length=0;
- loot.forEach(l=>{l.available=true;l.mesh.visible=true;});
+ for(let i=loot.length-1;i>=0;i--){const l=loot[i];if(l.drop){world.remove(l.mesh);disposeGroup(l.mesh);loot.splice(i,1);}else{l.available=true;l.mesh.visible=true;}}
  if(actor){world.remove(actor);disposeGroup(actor);}player.x=0;player.z=43;player.yaw=0;player.hp=100;player.stamina=100;player.hunger=100;player.thirst=100;player.dead=false;player.supplies=0;player.time=0;
- killCount=0;goal.kills=0;attackTimer=0;attackCooldown=0;runningTouch=false;paused=false;ended=false;cameraYaw=0;cameraPitch=.22;cameraDist=5.7;cameraMode='third';
+ killCount=0;goal.kills=0;attackTimer=0;attackCooldown=0;runningTouch=false;paused=false;ended=false;cameraYaw=0;cameraPitch=.22;cameraDist=5.7;cameraMode='third';document.getElementById('cameraToggle').textContent='VISTA: TERCERA';viewWeapon.visible=false;
  makePlayer();spawnZombies();updateHud();document.getElementById('ending').style.display='none';document.getElementById('start').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('controls').style.display='block';running=true;message('Encuentra suministros y elimina 8 zombis para escapar.',3200);
 }
 function message(txt,ms=1800){const e=document.getElementById('message');e.textContent=txt;e.style.opacity='1';messageUntil=performance.now()+ms;}
@@ -288,7 +293,7 @@ function collide(x,z,r=.42){
 }
 function attack(){
  if(!running||paused||ended||player.dead||attackCooldown>0)return;
- player.yaw=cameraYaw;
+ player.yaw=cameraYaw;if(actor)actor.rotation.y=player.yaw+Math.PI;
  attackCooldown=.48;attackTimer=.42;
  if(parts)parts.armR.rotation.x=-1.0;
  const fx=Math.sin(player.yaw),fz=-Math.cos(player.yaw);
@@ -356,7 +361,7 @@ function updatePlayer(dt,t){
  attackCooldown=Math.max(0,attackCooldown-dt);attackTimer=Math.max(0,attackTimer-dt);
  if(attackTimer<=0&&parts)parts.armR.rotation.x=0;
  if(player.hp<=0&&!player.dead){player.dead=true;endGame(false);}
- if(killCount>=reqKills&&player.z<-54&&Math.abs(player.x)<6.2){endGame(true);}
+ if(killCount>=reqKills&&player.z<-60&&Math.abs(player.x)<5.5){endGame(true);}
 }
 function updateZombies(dt,t){
  if(!running||paused||ended)return;
@@ -393,8 +398,10 @@ function updateCamera(dt){
   const look=new THREE.Vector3(Math.sin(cameraYaw)*Math.cos(cameraPitch),Math.sin(cameraPitch),-Math.cos(cameraYaw)*Math.cos(cameraPitch));
   camera.lookAt(desired.clone().add(look));
  }
- if(actor)actor.visible=cameraMode==='third';
+ if(actor)actor.visible=cameraMode==='third';viewWeapon.visible=cameraMode==='first';
 }
+function toggleCamera(){cameraMode=cameraMode==='third'?'first':'third';document.getElementById('cameraToggle').textContent='VISTA: '+(cameraMode==='third'?'TERCERA':'PRIMERA');if(actor)actor.visible=cameraMode==='third';viewWeapon.visible=cameraMode==='first';message(cameraMode==='third'?'Cámara en tercera persona: puedes ver al personaje.':'Cámara en primera persona.');}
+function updateInteractHint(){const btn=document.getElementById('interactButton');let near=false;if(running&&!paused&&!ended){for(const l of loot){if(l.available&&Math.hypot(l.x-player.x,l.z-player.z)<2.6){near=true;break;}}}btn.style.display=near?'block':'none';}
 function updateMap(){
  const c=document.getElementById('map'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='#131a16';ctx.fillRect(0,0,c.width,c.height);
  const sc=1.78,ox=124,oy=124;
@@ -413,7 +420,7 @@ function updateMap(){
 function frame(now){
  requestAnimationFrame(frame);const dt=Math.min(.04,(now-lastTime)/1000||0);lastTime=now;
  if(running&&!paused){
-  updatePlayer(dt,now);updateZombies(dt,now);
+  updatePlayer(dt,now);updateZombies(dt,now);updateInteractHint();
   if(now%140<35)updateHud();
  }
  if(actor){
@@ -441,6 +448,7 @@ document.getElementById('attackButton').addEventListener('pointerdown',e=>{e.pre
 document.getElementById('interactButton').addEventListener('pointerdown',e=>{e.preventDefault();interact();});
 document.getElementById('runButton').addEventListener('pointerdown',e=>{e.preventDefault();runningTouch=true;e.currentTarget.classList.add('active');});
 for(const ev of ['pointerup','pointercancel','pointerleave'])document.getElementById('runButton').addEventListener(ev,e=>{runningTouch=false;e.currentTarget.classList.remove('active');});
+document.getElementById('cameraToggle').addEventListener('click',toggleCamera);
 document.getElementById('pause').addEventListener('click',()=>{
  if(!running)return;paused=!paused;document.getElementById('pause').textContent=paused?'REANUDAR':'PAUSAR';
  if(paused)message('Partida pausada');else message('Partida reanudada');
@@ -451,6 +459,7 @@ window.addEventListener('keydown',e=>{
  if(!running&&e.code==='Enter')resetGame();
  if(e.code==='Space'&&!e.repeat)attack();
  if(e.code==='KeyE'&&!e.repeat)interact();
+ if(e.code==='KeyV'&&!e.repeat)toggleCamera();
 });
 window.addEventListener('keyup',e=>keys[e.code]=false);
 window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;joyX=0;joyY=0;});
@@ -461,9 +470,9 @@ function moveStick(e){const r=base.getBoundingClientRect(),cx=r.left+r.width/2,c
 base.addEventListener('pointermove',e=>{if(e.pointerId===stickId)moveStick(e);});
 function resetStick(){stickId=null;joyX=0;joyY=0;knob.style.transform='translate(0,0)';}
 base.addEventListener('pointerup',resetStick);base.addEventListener('pointercancel',resetStick);
-canvas.addEventListener('pointerdown',e=>{if(!running||paused)return;lookPointer=e.pointerId;lastPX=e.clientX;lastPY=e.clientY;canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointerdown',e=>{if(!running||paused)return;lookPointer=e.pointerId;lastPX=e.clientX;lastPY=e.clientY;lookStartX=e.clientX;lookStartY=e.clientY;canvas.setPointerCapture(e.pointerId);});
 canvas.addEventListener('pointermove',e=>{if(lookPointer!==e.pointerId)return;const dx=e.clientX-lastPX,dy=e.clientY-lastPY;lastPX=e.clientX;lastPY=e.clientY;cameraYaw-=dx*.0055;cameraPitch=Math.max(-.4,Math.min(.65,cameraPitch-dy*.003));});
-function releaseLook(e){if(lookPointer!==e.pointerId)return;const moved=Math.abs(e.clientX-lastPX)+Math.abs(e.clientY-lastPY);lookPointer=null;if(e.pointerType==='mouse'&&moved<6)attack();}
+function releaseLook(e){if(lookPointer!==e.pointerId)return;const moved=Math.abs(e.clientX-lookStartX)+Math.abs(e.clientY-lookStartY);lookPointer=null;if(e.pointerType==='mouse'&&moved<6)attack();}
 canvas.addEventListener('pointerup',releaseLook);canvas.addEventListener('pointercancel',e=>{if(lookPointer===e.pointerId)lookPointer=null;});
 canvas.addEventListener('wheel',e=>{cameraDist=Math.max(3.4,Math.min(8,cameraDist+e.deltaY*.006));},{passive:true});
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
