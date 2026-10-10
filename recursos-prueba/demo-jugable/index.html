@@ -129,7 +129,7 @@ function solid(x,z,w,d,h,material,rot=0){
  const o=cube(world,w,h,d,material,x,h/2,z);o.rotation.y=rot;
  const c={x,z,hx:w/2,hz:d/2,rot};colliders.push(c);return o;
 }
-function floor(x,z,w,d,material=M.ground){cube(world,w,.18,d,material,x,-.1,z,false);}
+function floor(x,z,w,d,material=M.ground,y=-.1){cube(world,w,.18,d,material,x,y,z,false);}
 const viewWeapon=new THREE.Group();viewWeapon.position.set(.35,-.32,-.7);camera.add(viewWeapon);
 cube(viewWeapon,.13,.34,.12,mat('#58634c'),.06,-.02,0);cube(viewWeapon,.085,.15,.10,mat('#b78c6a'),.06,-.19,-.015);cube(viewWeapon,.045,.23,.035,M.steel,.06,-.36,-.06);cube(viewWeapon,.13,.035,.05,M.black,.06,-.26,-.02);viewWeapon.visible=false;
 function putBench(x,z,rot=0){
@@ -191,7 +191,7 @@ function makeDoor(x,z,price,label,rotation=0,a='cells',b='cafeteria'){
 }
 function makeCell(cx,cz,level,side){
  const y=level*4.25,w=5.15,d=6.4,front=cx-side*w/2;
- cube(world,w,.16,d,M.concrete,cx,y+.08,cz,false);
+ cube(world,w,.16,d,M.concrete,cx,y-.07,cz,false);
  cube(world,.22,3.45,d,M.wall,cx+side*w/2,y+1.8,cz);
  cube(world,w,3.45,.22,M.wall,cx,y+1.8,cz-side*d/2);
  cube(world,w,3.45,.22,M.wall,cx,y+1.8,cz+side*d/2);
@@ -207,7 +207,7 @@ function makeCell(cx,cz,level,side){
  cube(world,.58,.09,.62,M.white,cx+side*1.7,y+.56,cz+1.75);cube(world,.82,.12,.28,M.wood,cx-side*1.2,y+2.35,cz-2.2);
 }
 function createWorld(){
- floor(0,0,120,120,M.ground);floor(0,27,42,48,M.concrete);floor(0,-11,45,36,M.road);floor(40,-3,36,44,M.concrete);floor(-40,-3,36,44,M.concrete);
+ floor(0,0,120,120,M.ground,-.18);floor(0,27,42,44,M.concrete);floor(0,-13,44,36,M.road);floor(40,-3,36,44,M.concrete);floor(-40,-3,36,44,M.concrete);
  addWall(0,-59,120,.9,6.2,M.concrete);addWall(0,59,120,.9,6.2,M.concrete);addWall(-59,0,.9,118,6.2,M.concrete);addWall(59,0,.9,118,6.2,M.concrete);
  for(let x=-56;x<=56;x+=3.2){cyl(world,.045,.045,5.6,M.bars,x,2.8,-58.2,6);cyl(world,.045,.045,5.6,M.bars,x,2.8,58.2,6);}
  // Bloque de celdas de dos pisos, con galerías, rejas abiertas, literas y sanitarios.
