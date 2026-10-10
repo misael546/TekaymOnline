@@ -75,6 +75,8 @@ jobs:
           if (!html.includes('joyX=0;joyY=0;lookPointer=null;for(const k in keys)keys[k]=false;stickId=null;')) throw new Error('Respawn must clear stale input state');
           if (!html.includes("window.addEventListener('pointercancel',e=>{if(e.pointerId===stickId)resetStick();if(e.pointerId===lookPointer)lookPointer=null;});")) throw new Error('Global touch cancellation recovery missing');
           if (!html.includes('cameraYaw=-Math.PI/2;')) throw new Error('Camera must face the side-mounted cell gate');
+          if (!html.includes('cameraYaw=(-Math.PI/2)*rise;')) throw new Error('Intro camera yaw animation missing');
+          if (html.includes('id="map"') || html.includes('updateMap();')) throw new Error('Minimap must be removed and must not break the render loop');
           if (!html.includes('const camY=openingSequence>0?.96+.66*rise:1.62')) throw new Error('Intro camera height regression');
           if (!html.includes('const pitch=openingSequence>0?-.035*(1-rise)+.03*rise:cameraPitch')) throw new Error('Intro camera pitch regression');
           if (!html.includes('openingSequence=4.8;roundHasStarted=false;')) throw new Error('Wake-up sequence must not leave controls locked too long');
