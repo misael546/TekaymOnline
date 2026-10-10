@@ -522,7 +522,7 @@ function frame(now){
   if(now%140<35)updateHud();
  }
  if(actor){
-  if(cameraMode==='third'&&actor.visible)actor.position.set(player.x,0,player.z);
+   actor.visible=false;
   if(parts&&running&&!paused){
    resetPose(parts);
    const moving=Math.abs(joyX)+Math.abs(joyY)>.13||keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD;
@@ -568,7 +568,7 @@ document.getElementById('attackButton').addEventListener('pointerdown',e=>{e.pre
 document.getElementById('interactButton').addEventListener('pointerdown',e=>{e.preventDefault();interact();});
 document.getElementById('runButton').addEventListener('pointerdown',e=>{e.preventDefault();runningTouch=true;e.currentTarget.classList.add('active');});
 for(const ev of ['pointerup','pointercancel','pointerleave'])document.getElementById('runButton').addEventListener(ev,e=>{runningTouch=false;e.currentTarget.classList.remove('active');});
-document.getElementById('cameraToggle').addEventListener('click',toggleCamera);
+
 document.getElementById('pause').addEventListener('click',()=>{
  if(!running)return;paused=!paused;document.getElementById('pause').textContent=paused?'REANUDAR':'PAUSAR';
  if(paused)message('Partida pausada');else message('Partida reanudada');
