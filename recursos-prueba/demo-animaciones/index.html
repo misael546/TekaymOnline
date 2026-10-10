@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="color-scheme" content="dark">
+<title>Tekaym Online — Laboratorio de animaciones</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#e8edf2;background:#090d10;font-synthesis:none}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090d10}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.panel{position:fixed;z-index:2;background:#10171deF;border:1px solid #34414b;border-radius:14px;box-shadow:0 10px 35px #0005;backdrop-filter:blur(14px)}
+#top{top:12px;left:12px;right:12px;display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:62px}
+.brand{font-size:14px;font-weight:900;letter-spacing:1.2px}.subtitle{font-size:10px;color:#9eacb7;margin-top:3px}
+.status{margin-left:auto;border:1px solid #3a594b;color:#b8e9c9;background:#162920;border-radius:99px;padding:7px 10px;white-space:nowrap;font-size:10px;font-weight:800}
+#controls{left:12px;top:90px;bottom:12px;width:270px;display:flex;flex-direction:column;gap:13px;padding:15px;overflow-y:auto}
+h2{margin:0 0 5px;font-size:11px;color:#8fa2b2;letter-spacing:1.1px;text-transform:uppercase}
+label{display:block;font-size:11px;color:#bac5cd;margin:0 0 6px}
+select,button,input{font:inherit}
+select{width:100%;padding:10px 9px;border:1px solid #3c4a54;border-radius:9px;color:#e8edf2;background:#0b1116;outline:none}
+.section{display:flex;flex-direction:column;gap:7px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+button{cursor:pointer;border:1px solid #3c4a54;border-radius:9px;padding:10px;color:#e8edf2;background:#1a252d;font-size:11px;font-weight:750;transition:background .15s,border-color .15s}
+button:hover{background:#263640;border-color:#718694}
+button.active{background:#344a36;border-color:#789b72;color:#e5ffe0}
+button.action{background:#46312a;border-color:#785444}
+button.danger{background:#452526;border-color:#82484a}
+input[type=range]{width:100%;accent-color:#c7d4a0}
+.rangehead{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#c1ccd3}
+.note{font-size:10px;line-height:1.55;color:#8e9da8}
+#bottom{position:fixed;z-index:2;bottom:16px;left:300px;right:16px;display:flex;justify-content:center;pointer-events:none}
+.tip{padding:9px 13px;background:#10171dcc;border:1px solid #34414b;border-radius:99px;font-size:10px;color:#b7c2cb;backdrop-filter:blur(10px);text-align:center}
+#badge{position:fixed;z-index:2;right:16px;top:88px;background:#10171dcc;border:1px solid #34414b;border-radius:10px;padding:9px 11px;color:#cbd5db;font-size:10px}
+#error{position:fixed;z-index:9;inset:0;display:none;align-items:center;justify-content:center;background:#090d10;color:#fff;padding:25px;text-align:center}
+@media(max-width:700px){
+ #top{top:8px;left:8px;right:8px;padding:10px}.brand{font-size:12px}.subtitle{max-width:210px}.status{font-size:9px;padding:6px 8px}
+ #controls{left:8px;top:auto;bottom:8px;width:auto;right:8px;max-height:43vh;padding:12px;gap:10px}
+ #bottom{display:none}#badge{top:78px;right:8px;font-size:9px}
+ .layoutrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Vista 3D interactiva"></canvas>
+<header id="top" class="panel">
+ <div><div class="brand">TEKAYM ONLINE</div><div class="subtitle">Laboratorio de personajes · escenarios · animaciones</div></div>
+ <div class="status">MODO PRUEBA · SIN SERVIDOR</div>
+</header>
+<aside id="controls" class="panel">
+ <div class="section">
+  <h2>Personaje</h2>
+  <select id="character">
+   <option value="survivor_soldier">Superviviente — soldado</option>
+   <option value="survivor_civil">Superviviente — civil</option>
+   <option value="survivor_female">Superviviente — mujer</option>
+   <option value="zombie_prisoner" selected>Zombi — preso</option>
+   <option value="zombie_runner">Zombi — corredor</option>
+   <option value="zombie_brute">Zombi — bruto</option>
+   <option value="zombie_guard">Zombi — guardia</option>
+   <option value="zombie_scientist">Zombi — científico</option>
+   <option value="zombie_doctor">Zombi — médico</option>
+   <option value="mutant_boss">Zombi mutado — jefe</option>
+  </select>
+ </div>
+ <div class="section">
+  <h2>Animación</h2>
+  <div class="actions">
+   <button data-anim="idle" class="active">Reposo</button>
+   <button data-anim="walk">Caminar</button>
+   <button data-anim="run">Correr</button>
+   <button data-anim="attack" class="action">Atacar</button>
+   <button data-anim="hit">Recibir golpe</button>
+   <button data-anim="death" class="danger">Morir</button>
+  </div>
+  <div class="rangehead"><label for="speed">Velocidad de animación</label><span id="speedLabel">1.0×</span></div>
+  <input id="speed" type="range" min=".25" max="2" step=".05" value="1">
+  <div class="actions"><button id="reset">Restablecer personaje</button><button id="spin">Giro automático: no</button></div>
+ </div>
+ <div class="section">
+  <h2>Escenario</h2>
+  <select id="environment">
+   <option value="cells">Bloque de celdas</option>
+   <option value="cafeteria">Comedor</option>
+   <option value="yard">Patio de la prisión</option>
+   <option value="infirmary">Enfermería</option>
+   <option value="showers">Duchas</option>
+   <option value="arsenal">Arsenal</option>
+   <option value="lab">Laboratorio de cuarentena</option>
+   <option value="workshop">Taller de mantenimiento</option>
+   <option value="gate">Portón principal</option>
+  </select>
+ </div>
+ <div class="section">
+  <h2>Vista</h2>
+  <div class="actions"><button id="front">Vista frontal</button><button id="side">Vista lateral</button></div>
+  <div class="note">Arrastra la vista para girar la cámara. Usa la rueda o pellizca para acercar. Pulsa los controles para comparar movimientos y poses.</div>
+ </div>
+ <div class="note">Prototipo visual local en el navegador. No guarda progreso ni conecta con multijugador, servidor o base de datos. Las animaciones son temporales para ajustar el estilo antes del rigging final.</div>
+</aside>
+<div id="badge">PROTOTIPO · <span id="animName">REPOSO</span></div>
+<div id="bottom"><div class="tip">Arrastra para girar · rueda para acercar · cambia personaje, pose y escenario desde el panel</div></div>
+<div id="error">No se pudo iniciar el visor 3D. Revisa la conexión a internet y vuelve a abrir la página; el visor carga Three.js desde un CDN público.</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const canvas=document.querySelector('#scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#171d21');
+scene.fog=new THREE.Fog('#171d21',22,55);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,120);
+let cameraRadius=7.4,azimuth=.48,polar=1.16;
+const target=new THREE.Vector3(0,1.2,0);
+function setCamera(){camera.position.set(target.x+cameraRadius*Math.sin(polar)*Math.sin(azimuth),target.y+cameraRadius*Math.cos(polar),target.z+cameraRadius*Math.sin(polar)*Math.cos(azimuth));camera.lookAt(target);}
+setCamera();
+
+scene.add(new THREE.HemisphereLight(0xb8cad8,0x48423a,2.0));
+const key=new THREE.DirectionalLight(0xffe4c1,3.1);key.position.set(-5,9,5);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-15;key.shadow.camera.right=15;key.shadow.camera.top=15;key.shadow.camera.bottom=-15;scene.add(key);
+const fill=new THREE.DirectionalLight(0x91b6d4,1.15);fill.position.set(5,5,-5);scene.add(fill);
+
+const mat=(color,rough=.86,metal=0)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const mats={
+ concrete:mat('#626665'), darkConcrete:mat('#343a3b'), floor:mat('#494e4c'), metal:mat('#707d80',.58,.55),
+ rust:mat('#795844'), bars:mat('#59676a',.48,.7), wood:mat('#795d43'), bench:mat('#61533f'),
+ blood:mat('#622d2a'), cloth:mat('#7d8585'), glass:mat('#8aa4a6',.3,.15), white:mat('#b9c4c5'),
+ green:mat('#596e4d'), warning:mat('#b18c43'), light:mat('#d9c99d',.35)
+};
+function cube(parent,w,h,d,material,x,y,z, opts={}){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=opts.cast!==false;o.receiveShadow=true;parent.add(o);return o;}
+function cylinder(parent,r1,r2,h,material,x,y,z,segments=8){const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,segments),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
+function sphere(parent,r,material,x,y,z,segments=9){const o=new THREE.Mesh(new THREE.SphereGeometry(r,segments,Math.max(5,Math.floor(segments*.65))),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
+
+const world=new THREE.Group();scene.add(world);
+let actor=null,actorParts=null,animation='idle',animationStart=0,animationClock=0,autoSpin=false,lastFrame=performance.now();
+
+function clearGroup(g){while(g.children.length){const o=g.children.pop();if(o.geometry)o.geometry.dispose();}}
+function buildRoom(type){
+ clearGroup(world);
+ const floorM=type==='yard'?mat('#66685e'):mat('#4b504f');
+ cube(world,30,.25,30,floorM,0,-.17,0);
+ const wallH=type==='yard'?4.4:4.2, wallMat=type==='yard'?mats.darkConcrete:mats.concrete;
+ if(type!=='yard'){
+  cube(world,15,wallH,.3,wallMat,0,wallH/2,-5.4);
+  cube(world,.3,wallH,11,wallMat,-7.35,wallH/2,0);
+  cube(world,.3,wallH,11,wallMat,7.35,wallH/2,0);
+  for(let x=-6;x<=6;x+=2){cube(world,1.95,.08,.35,mats.darkConcrete,x,wallH-.6,-5.2);}
+ } else {
+  cube(world,20,.45,.5,mats.concrete,0,2.1,-8);
+  cube(world,.45,4.3,16,mats.concrete,-9.8,2.15,0);cube(world,.45,4.3,16,mats.concrete,9.8,2.15,0);
+  for(let x=-9;x<=9;x+=1.3){cylinder(world,.035,.035,4.5,mats.bars,x,2.5,-7.8,5);}
+  for(let y=.8;y<4.5;y+=1.1)cube(world,20,.045,.12,mats.bars,0,y,-7.8);
+ }
+ const addTable=(x,z,w=2.2,d=.8)=>{
+  cube(world,w,.16,d,mats.wood,x,.88,z);
+  for(const dx of [-w*.38,w*.38])for(const dz of [-d*.32,d*.32])cube(world,.1,.8,.1,mats.rust,x+dx,.43,z+dz);
+ };
+ if(type==='cells'){
+  for(const x of [-5,-2,1,4]){cube(world,.12,2.8,.25,mats.bars,x,1.4,-3.1);cube(world,1.5,.12,.25,mats.bars,x+.65,2.75,-3.1);for(let k=0;k<6;k++)cylinder(world,.035,.035,2.7,mats.bars,x+.18+k*.22,1.35,-3.05,6);}
+  for(const x of [-4,0,4]){cube(world,1.1,.15,2.5,mats.rust,x,.45,1.8);cube(world,1.1,.14,2.2,mats.wood,x,.57,1.8);}
+ }else if(type==='cafeteria'){
+  for(const z of [-2,0,2])for(const x of [-4,0,4]){addTable(x,z,2.3,.85);cube(world,.4,.65,.4,mats.wood,x-1.25,.34,z);cube(world,.4,.65,.4,mats.wood,x+1.25,.34,z);}
+  cube(world,7,.8,.8,mats.metal,0,.45,-4.7);
+ }else if(type==='infirmary'){
+  for(const x of [-4,0,4]){cube(world,2.3,.25,1.2,mats.white,x,.65,-1.8);cube(world,2.15,.18,.36,mats.light,x,.85,-2.15);for(const dx of [-.9,.9])cube(world,.1,.65,.1,mats.metal,x+dx,.32,-1.8);cube(world,2.2,.16,.15,mats.metal,x,.25,-1.2);}
+  for(const x of [-5,5]){cube(world,1,.9,.9,mats.white,x,.55,2);cube(world,.9,1,.8,mats.glass,x,.9,2);}
+ }else if(type==='showers'){
+  for(const x of [-4,-2,0,2,4]){cube(world,.08,2.8,2.5,mats.rust,x,1.4,-2.9);cylinder(world,.06,.06,.25,mats.metal,x,2.6,-2.1,7);cylinder(world,.12,.1,.08,mats.metal,x,2.4,-3.15,8);}
+ }else if(type==='arsenal'){
+  for(const x of [-4,0,4]){cube(world,2.1,3,.35,mats.metal,x,1.5,-4.6);for(const y of [.6,1.3,2,2.7])cube(world,1.9,.08,.45,mats.rust,x,y,-4.3);}
+  addTable(0,1,4,1.3);
+ }else if(type==='lab'){
+  for(const x of [-4,0,4]){cylinder(world,.55,.55,2.4,mats.glass,x,1.2,-2.8,12);cylinder(world,.62,.62,.12,mats.metal,x,2.4,-2.8,12);cylinder(world,.62,.62,.12,mats.metal,x,0,-2.8,12);cube(world,.15,2,.15,mats.metal,x,1.2,-2.05);}
+  addTable(0,1.8,5,1.4);
+ }else if(type==='workshop'){
+  addTable(0,-2,5,1);for(const x of [-4,4]){cylinder(world,.42,.42,1.2,mats.metal,x,.6,1.8,8);cube(world,1.5,.6,.15,mats.rust,x,2.1,-4.9);}
+  cube(world,3,.2,1.2,mats.metal,2.8,.9,2.4);
+ }else if(type==='gate'){
+  for(const x of [-6.5,6.5]){cube(world,1.4,4.4,1.4,mats.concrete,x,2.2,0);cube(world,1.8,.3,1.8,mats.metal,x,4.5,0);}
+  cube(world,11,.35,.35,mats.metal,0,2,0);cube(world,11,.35,.35,mats.metal,0,3.8,0);
+  for(let x=-5.3;x<5.5;x+=.55)cylinder(world,.06,.06,2.3,mats.bars,x,2.9,0,6);
+ }
+ // ambient utilitarian fixtures
+ for(const x of [-4,0,4]){cube(world,1.2,.06,.22,mats.light,x,wallH-.25,-5.12,{cast:false});}
+}
+const presets={
+ survivor_soldier:{skin:'#a87550',shirt:'#526c49',pants:'#303d38',hair:'#3a3027',type:'human',build:1},
+ survivor_civil:{skin:'#c08b68',shirt:'#556878',pants:'#3f4449',hair:'#49352a',type:'human',build:1},
+ survivor_female:{skin:'#c89779',shirt:'#6a4045',pants:'#343a44',hair:'#422e28',type:'human',build:1},
+ zombie_prisoner:{skin:'#888e71',shirt:'#6b634f',pants:'#574f43',hair:'#42433a',type:'zombie',build:1},
+ zombie_runner:{skin:'#a5a17e',shirt:'#4e5b4a',pants:'#45483e',hair:'#4a4940',type:'zombie',build:.88},
+ zombie_brute:{skin:'#737c5d',shirt:'#434d40',pants:'#383e35',hair:'#414236',type:'zombie',build:1.28},
+ zombie_guard:{skin:'#878e76',shirt:'#3f4948',pants:'#343a3b',hair:'#3d3b31',type:'zombie',build:1.05},
+ zombie_scientist:{skin:'#989a80',shirt:'#afb6b0',pants:'#777f79',hair:'#5a5a4e',type:'zombie',build:1},
+ zombie_doctor:{skin:'#9e9b7b',shirt:'#537975',pants:'#444d4b',hair:'#51463a',type:'zombie',build:1},
+ mutant_boss:{skin:'#68745a',shirt:'#424c3e',pants:'#363d34',hair:'#3f4336',type:'zombie',build:1.35}
+};
+function limb(parent,x,y,z,length,width,material){
+ const pivot=new THREE.Group();pivot.position.set(x,y,z);parent.add(pivot);
+ cube(pivot,width,length,width,material,0,-length/2,0);
+ sphere(pivot,width*.53,material,0,-length,0,7);
+ return pivot;
+}
+function createActor(type){
+ if(actor){scene.remove(actor);disposeActor(actor);}
+ const spec=presets[type]||presets.zombie_prisoner,b=spec.build;
+ const root=new THREE.Group();scene.add(root);actor=root;
+ const skin=mat(spec.skin),shirt=mat(spec.shirt),pants=mat(spec.pants),hair=mat(spec.hair),dark=mat('#222729'),eye=mat(spec.type==='zombie'?'#d5c27b':'#e4ddd0'),iris=mat(spec.type==='zombie'?'#4b2d24':'#3b4e58');
+ root.scale.setScalar(b);
+ const hips=new THREE.Group();root.add(hips);hips.position.y=.95;
+ cube(hips,.52,.28,.34,pants,0,0,0);
+ const torso=new THREE.Group();root.add(torso);torso.position.y=1.34;
+ cube(torso,.61,.72,.34,shirt,0,0,0);
+ cylinder(torso,.12,.14,.16,skin,0,.42,0,8);
+ sphere(torso,.24,skin,0,.74,0,10);
+ // ears
+ for(const s of [-1,1])sphere(torso,.05,skin,s*.24,.75,0,7);
+ // hair or helmets
+ if(type==='survivor_soldier'||type==='zombie_guard'){
+  cube(torso,.51,.13,.46,mat(type==='survivor_soldier'?'#4b6040':'#373f3e'),0,.94,0);
+  cube(torso,.42,.08,.38,mat(type==='survivor_soldier'?'#576c49':'#495352'),0,.99,0);
+ }else if(type==='survivor_female'){
+  sphere(torso,.25,hair,0,.83,-.07,9);cube(torso,.46,.52,.14,hair,0,.52,-.16);
+ }else{sphere(torso,.22,hair,0,.91,-.035,8);if(spec.type==='zombie')sphere(torso,.12,mat('#49493b'),-.14,.93,.02,6);}
+ for(const s of [-1,1]){
+  sphere(torso,.036,eye,s*.085,.77,.207,7);sphere(torso,.018,iris,s*.085,.77,.237,6);
+  cube(torso,.1,.035,.025,dark,s*.085,.69,.207);
+ }
+ if(spec.type==='zombie'){
+  sphere(torso,.07,mat('#663b30'),-.13,.59,.185,6);sphere(torso,.04,mat('#6e3931'),.13,.47,.19,6);
+  cube(torso,.12,.025,.025,mat('#2d2724'),0,.65,.19);
+ }
+ if(type==='survivor_soldier'){
+  cube(torso,.19,.27,.12,mat('#384c36'),-.37,.08,.06);
+  cube(torso,.19,.25,.12,mat('#384c36'),.37,.04,.06);
+  cube(torso,.3,.08,.13,mat('#b0ab86'),0,.16,.205);
+ }
+ if(type==='zombie_scientist'||type==='zombie_doctor'){
+  cube(torso,.48,.65,.07,mat(type==='zombie_doctor'?'#4b7470':'#b8c1ba'),0,-.02,.2);
+  cube(torso,.09,.12,.045,mat('#813b32'),.1,.13,.25);
+ }
+ const shoulderL=limb(root,-.39,1.63,0,.42,.18,shirt),shoulderR=limb(root,.39,1.63,0,.42,.18,shirt);
+ const elbowL=limb(shoulderL,0,-.4,0,.39,.145,shirt),elbowR=limb(shoulderR,0,-.4,0,.39,.145,shirt);
+ sphere(elbowL,.075,skin,0,-.37,.02,7);sphere(elbowR,.075,skin,0,-.37,.02,7);
+ const hipL=limb(root,-.17,.94,0,.52,.22,pants),hipR=limb(root,.17,.94,0,.52,.22,pants);
+ const kneeL=limb(hipL,0,-.51,0,.47,.17,pants),kneeR=limb(hipR,0,-.51,0,.47,.17,pants);
+ cube(kneeL,.23,.13,.38,dark,0,-.47,.08);cube(kneeR,.23,.13,.38,dark,0,-.47,.08);
+ let backpack=null;
+ if(type==='survivor_soldier'||type==='survivor_civil'||type==='survivor_female'){
+  backpack=new THREE.Group();root.add(backpack);backpack.position.set(0,1.35,-.25);
+  cube(backpack,.34,.48,.18,mat('#424d47'),0,0,-.02);cube(backpack,.24,.18,.2,mat('#525e54'),0,-.12,.08);
+ }
+ let weapon=null;
+ if(spec.type==='human'){
+  weapon=new THREE.Group();elbowR.add(weapon);weapon.position.set(.025,-.33,.04);
+  cylinder(weapon,.045,.045,.22,mat('#5f6a6e'),0,-.1,.02,7);
+  cube(weapon,.07,.2,.07,mat('#494139'),0,-.3,.01);
+ }
+ const parts={root,torso,hips,shoulderL,shoulderR,elbowL,elbowR,hipL,hipR,kneeL,kneeR,backpack,weapon,type};
+ root.userData.parts=parts;
+ return parts;
+}
+function disposeActor(o){o.traverse(n=>{if(n.geometry)n.geometry.dispose();if(n.material&&n.material.dispose)n.material.dispose();});}
+function setAnimation(name){
+ animation=name;animationStart=performance.now()/1000;
+ document.querySelector('#animName').textContent=({idle:'REPOSO',walk:'CAMINAR',run:'CORRER',attack:'ATAQUE',hit:'GOLPE',death:'MUERTE'})[name]||name.toUpperCase();
+ document.querySelectorAll('[data-anim]').forEach(b=>b.classList.toggle('active',b.dataset.anim===name));
+ if(actorParts){actorParts.root.rotation.set(0,0,0);actorParts.root.position.y=0;}
+}
+function resetActor(){const type=document.querySelector('#character').value;actorParts=createActor(type);setAnimation('idle');}
+function resetPose(p){p.root.rotation.set(0,0,0);p.root.position.y=0;p.torso.rotation.set(0,0,0);p.shoulderL.rotation.set(0,0,0);p.shoulderR.rotation.set(0,0,0);p.elbowL.rotation.set(0,0,0);p.elbowR.rotation.set(0,0,0);p.hipL.rotation.set(0,0,0);p.hipR.rotation.set(0,0,0);p.kneeL.rotation.set(0,0,0);p.kneeR.rotation.set(0,0,0);if(p.backpack)p.backpack.rotation.set(0,0,0);}
+function animateActor(now){
+ if(!actorParts)return;
+ const p=actorParts;resetPose(p);
+ const elapsed=(now-animationStart)*Number(document.querySelector('#speed').value);
+ const w=animation==='run'?10:animation==='walk'?6:2.4;
+ const swing=Math.sin(elapsed*w);
+ if(animation==='idle'){
+  p.root.position.y=.025+Math.sin(now*2.4)*.025;
+  p.torso.rotation.x=Math.sin(now*1.2)*.025;
+  p.shoulderL.rotation.x=Math.sin(now*1.6)*.035;p.shoulderR.rotation.x=-Math.sin(now*1.6)*.035;
+ }else if(animation==='walk'||animation==='run'){
+  const amp=animation==='run'?.95:.55;
+  p.hipL.rotation.x=swing*amp;p.hipR.rotation.x=-swing*amp;
+  p.kneeL.rotation.x=Math.max(0,-swing)*.65;p.kneeR.rotation.x=Math.max(0,swing)*.65;
+  p.shoulderL.rotation.x=-swing*.8;p.shoulderR.rotation.x=swing*.8;
+  p.elbowL.rotation.x=-.16-Math.abs(swing)*.3;p.elbowR.rotation.x=-.16-Math.abs(swing)*.3;
+  p.torso.rotation.x=animation==='run'?.17:.05;
+  p.root.position.y=Math.abs(Math.sin(elapsed*w*2))*(animation==='run'?.11:.045);
+  p.root.rotation.y=Math.sin(elapsed*w*.5)*.035;
+ }else if(animation==='attack'){
+  const phase=Math.min(1,elapsed/.72);
+  const recoil=phase<.3?phase/.3:phase<.6?1-(phase-.3)/.3:.0;
+  p.shoulderR.rotation.x=-1.3*recoil;p.shoulderR.rotation.z=-.45*recoil;
+  p.elbowR.rotation.x=-.9*recoil;
+  p.shoulderL.rotation.x=.25*recoil;
+  p.torso.rotation.y=-.25*recoil;p.torso.rotation.x=.08*recoil;
+  if(elapsed>.78)setAnimation('idle');
+ }else if(animation==='hit'){
+  const phase=Math.min(1,elapsed/.75),kick=Math.sin(phase*Math.PI);
+  p.torso.rotation.x=-.36*kick;p.torso.rotation.z=.22*kick;p.root.position.y=.035*kick;
+  p.shoulderL.rotation.x=.6*kick;p.shoulderR.rotation.x=.75*kick;
+  if(elapsed>.8)setAnimation('idle');
+ }else if(animation==='death'){
+  const phase=Math.min(1,elapsed/.9),e=phase*phase*(3-2*phase);
+  p.root.rotation.x=e*1.48;p.root.rotation.z=e*.05;p.root.position.y=-e*.1;
+  p.shoulderL.rotation.x=e*.55;p.shoulderR.rotation.x=e*.65;p.hipL.rotation.x=e*.55;p.hipR.rotation.x=e*.65;
+ }
+ if(autoSpin&&animation!=='death')p.root.rotation.y=Math.sin(now*.45)*.42;
+}
+
+const opts=[['cells','Bloque de celdas'],['cafeteria','Comedor'],['yard','Patio'],['infirmary','Enfermería'],['showers','Duchas'],['arsenal','Arsenal'],['lab','Laboratorio'],['workshop','Taller'],['gate','Portón']];
+buildRoom('cells');actorParts=createActor('zombie_prisoner');
+document.querySelector('#character').addEventListener('change',resetActor);
+document.querySelector('#environment').addEventListener('change',e=>buildRoom(e.target.value));
+document.querySelectorAll('[data-anim]').forEach(b=>b.addEventListener('click',()=>setAnimation(b.dataset.anim)));
+document.querySelector('#speed').addEventListener('input',e=>document.querySelector('#speedLabel').textContent=Number(e.target.value).toFixed(2)+'×');
+document.querySelector('#reset').addEventListener('click',()=>{resetActor();cameraRadius=7.4;azimuth=.48;polar=1.16;setCamera();});
+document.querySelector('#spin').addEventListener('click',e=>{autoSpin=!autoSpin;e.target.textContent='Giro automático: '+(autoSpin?'sí':'no');e.target.classList.toggle('active',autoSpin);});
+document.querySelector('#front').addEventListener('click',()=>{azimuth=0;polar=1.22;setCamera();});
+document.querySelector('#side').addEventListener('click',()=>{azimuth=Math.PI/2;polar=1.22;setCamera();});
+
+let drag=false,px=0,py=0;
+canvas.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;azimuth-=(e.clientX-px)*.008;polar=Math.max(.35,Math.min(1.85,polar+(e.clientY-py)*.006));px=e.clientX;py=e.clientY;setCamera();});
+canvas.addEventListener('pointerup',()=>drag=false);canvas.addEventListener('pointercancel',()=>drag=false);
+canvas.addEventListener('wheel',e=>{cameraRadius=Math.max(3.1,Math.min(15,cameraRadius+e.deltaY*.008));setCamera();},{passive:true});
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
+window.addEventListener('resize',resize);
+function frame(){requestAnimationFrame(frame);const now=performance.now()/1000;animateActor(now);renderer.render(scene,camera);}
+frame();
+</script>
+<script>
+window.addEventListener('error',function(){document.querySelector('#error').style.display='flex';});
+window.addEventListener('unhandledrejection',function(){document.querySelector('#error').style.display='flex';});
+</script>
+<div id="error">No se pudo iniciar el visor 3D. Revisa tu conexión a internet y vuelve a abrir esta página.</div>
+</body>
+</html>
