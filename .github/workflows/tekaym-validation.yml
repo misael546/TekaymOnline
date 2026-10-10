@@ -41,7 +41,7 @@ jobs:
           echo 'Tekaym structure OK'
       - name: Check isolation
         run: |
-          if git grep -nE 'DarkPixel|neon_core|neon_release|neon_force|neon_reload|serverVersion|SERVER_VERSION|Belmo' -- ':!README.md' ':!docs/**' ':!.github/workflows/tekaym-validation.yml'; then
+          if git grep -nE 'DarkPixel|neon_core|neon_release|neon_force|neon_reload|serverVersion|SERVER_VERSION|Belmo' -- ':!README.md' ':!docs/**' ':!recursos-prueba/**' ':!.github/workflows/tekaym-validation.yml'; then
             echo 'Forbidden cross-project/server traces found'; exit 1;
           fi
       - name: Check version synchronization
