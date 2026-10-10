@@ -1,0 +1,32 @@
+newmtl skin
+Kd 0.43 0.48 0.35
+Ks 0.12 0.12 0.1
+Ns 18
+newmtl orange
+Kd 0.72 0.22 0.045
+Ks 0.08 0.06 0.04
+Ns 12
+newmtl cloth
+Kd 0.10 0.11 0.10
+Ks 0.03 0.03 0.03
+Ns 6
+newmtl rust
+Kd 0.36 0.14 0.045
+Ks 0.22 0.17 0.11
+Ns 38
+newmtl steel
+Kd 0.62 0.68 0.70
+Ks 0.82 0.84 0.86
+Ns 140
+newmtl rubber
+Kd 0.075 0.085 0.075
+Ks 0.12 0.12 0.11
+Ns 18
+newmtl concrete
+Kd 0.42 0.41 0.37
+Ks 0.05 0.05 0.04
+Ns 5
+newmtl wound
+Kd 0.28 0.055 0.035
+Ks 0.05 0.02 0.02
+Ns 8
