@@ -90,6 +90,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 </script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import {OBJLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/OBJLoader.js';
+import {MTLLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/MTLLoader.js';
 const canvas=document.getElementById('game');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(innerWidth,innerHeight);
@@ -251,14 +253,9 @@ function makeCell(cx,cz,level,side){
  for(let k=0;k<6;k++)cube(gate,.09,2.62,.075,M.metal,0,1.31,.17+k*.265);
  cube(gate,.14,.12,1.72,M.metal,0,.08,.84);cube(gate,.14,.12,1.72,M.metal,0,2.65,.84);
  const cellGate={mesh:gate,x:front,z:cz,level,side,baseZ:gateBaseZ,slideDistance:side*2.85,open:true,openAmount:1,sequenceIndex:cellGates.length};cellGates.push(cellGate);if(level===0)colliders.push({x:front,z:cz,hx:.17,hz:1.02,rot:0,cellRef:cellGate});
- // Litera con patas, colchón, manta y almohada apoyada sobre la cama.
+ // Punto de anclaje para la litera 3D original cargada desde modelos-3d.
  const bx=cx+side*.9,bz=cz-.85;
- cube(world,1.92,.13,2.16,M.rust,bx,y+.29,bz);
- for(const sx of [-.84,.84])for(const sz of [-.94,.94])cube(world,.10,.56,.10,M.metal,bx+sx,y+.27,bz+sz);
- cube(world,1.82,.18,2.04,M.bunk,bx,y+.62,bz);
- cube(world,1.76,.13,1.96,M.linen,bx,y+.775,bz);
- cube(world,1.20,.07,.62,mat('#687365'),bx,y+.875,bz+.45);
- cube(world,.54,.13,.42,M.white,bx,y+.91,bz-.70);
+ const bedAnchor=new THREE.Group();bedAnchor.name='tekaym-bunk-anchor';bedAnchor.userData.tekaymBunkAnchor=true;bedAnchor.position.set(bx,y,bz);world.add(bedAnchor);
  // Inodoro de una pieza: tanque contra la pared, taza y asiento alineados al suelo.
  const tx=cx+side*1.7,tz=cz+1.75;
  cube(world,.52,.66,.22,M.white,tx,y+.36,tz+.24);
@@ -267,6 +264,53 @@ function makeCell(cx,cz,level,side){
  cube(world,.48,.09,.44,M.white,tx,y+.43,tz);
  cube(world,.82,.12,.28,M.wood,cx-side*1.2,y+2.35,cz-2.2);
 }
+
+const tekaymAssetBase=new URL('../modelos-3d/',import.meta.url).href;
+let tekaymZombieTemplate=null,tekaymDoorTemplate=null,tekaymBunkTemplate=null;
+function prepTekaymModel(root){
+ root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;o.material.needsUpdate=true;}}});
+ return root;
+}
+function applyTekaymZombie(root){
+ if(!tekaymZombieTemplate||root.userData.tekaymZombieApplied)return;
+ root.userData.tekaymZombieApplied=true;
+ for(const child of [...root.children])child.visible=false;
+ const model=prepTekaymModel(tekaymZombieTemplate.clone(true));
+ model.scale.set(1,1,1);model.position.set(0,0,0);model.rotation.y=0;
+ model.userData.tekaymVisual=true;root.add(model);
+}
+function replaceTekaymCellDoors(){
+ if(!tekaymDoorTemplate)return;
+ for(const gate of cellGates){
+  if(!gate.mesh||gate.mesh.userData.tekaymDoorApplied)continue;
+  for(const child of [...gate.mesh.children])gate.mesh.remove(child);
+  const model=prepTekaymModel(tekaymDoorTemplate.clone(true));
+  model.scale.set(1.28,1.12,1);model.position.set(0,0,0);
+  gate.mesh.add(model);gate.mesh.userData.tekaymDoorApplied=true;
+ }
+}
+function replaceTekaymBunks(){
+ if(!tekaymBunkTemplate)return;
+ world.traverse(anchor=>{
+  if(!anchor.userData?.tekaymBunkAnchor||anchor.userData.tekaymBunkApplied)return;
+  const model=prepTekaymModel(tekaymBunkTemplate.clone(true));
+  model.position.set(0,0,0);model.scale.set(1,1,1);
+  anchor.add(model);anchor.userData.tekaymBunkApplied=true;
+ });
+}
+function loadTekaymAssets(){
+ const statusMessage=(text)=>{const el=document.getElementById('message');if(el&&typeof message==='function')message(text,3500);};
+ const mtlLoader=new MTLLoader();mtlLoader.setPath(tekaymAssetBase);
+ mtlLoader.load('tekaym_materiales.mtl',materials=>{
+  materials.preload();
+  const objLoader=new OBJLoader();objLoader.setMaterials(materials);objLoader.setPath(tekaymAssetBase);
+  const load=(file,done)=>objLoader.load(file,obj=>done(prepTekaymModel(obj)),undefined,err=>console.warn('[Tekaym 3D] No se pudo cargar '+file,err));
+  load('zombie-prisionero.obj',model=>{tekaymZombieTemplate=model;for(const z of zombies)applyTekaymZombie(z.mesh);});
+  load('puerta-celda.obj',model=>{tekaymDoorTemplate=model;replaceTekaymCellDoors();});
+  load('litera-prision.obj',model=>{tekaymBunkTemplate=model;replaceTekaymBunks();});
+ },undefined,err=>console.warn('[Tekaym 3D] No se pudieron cargar materiales; se mantienen modelos de respaldo',err));
+}
+
 function createWorld(){
  floor(0,0,120,120,M.ground,-.18);floor(0,27,42,44,M.concrete);floor(0,-13,44,36,M.road);floor(40,-3,36,44,M.concrete);floor(-40,-3,36,44,M.concrete);
  addWall(0,-59,120,.9,6.2,M.concrete);addWall(0,59,120,.9,6.2,M.concrete);addWall(-59,0,.9,118,6.2,M.concrete);addWall(59,0,.9,118,6.2,M.concrete);
@@ -519,7 +563,7 @@ function spawnOneZombie(zone){
  if(zone==='cells'&&Math.hypot(spawn[0]-player.x,spawn[1]-player.z)<8)spawn=choices.reduce((best,p)=>Math.hypot(p[0]-player.x,p[1]-player.z)>Math.hypot(best[0]-player.x,best[1]-player.z)?p:best,choices[0]);
  const r=Math.random();
  const type=round>=7&&r<Math.min(.12,.025+(round-7)*.006)?'boss':r<Math.min(.42,.17+(round-1)*.012)?'runner':r<Math.min(.62,.28+(round-1)*.018)?'brute':r<.75?'guard':r<.86?'doctor':'prisoner';
- const mesh=actorMesh(type,true),floorY=spawn[2]||0;mesh.position.set(spawn[0],floorY,spawn[1]);world.add(mesh);const roundScale=1+Math.max(0,round-1)*.16;if(round>=4&&Math.random()<Math.min(.35,(round-2)*.025))mesh.scale.setScalar(1.08+Math.min(.12,round*.004));
+ const mesh=actorMesh(type,true),floorY=spawn[2]||0;mesh.position.set(spawn[0],floorY,spawn[1]);world.add(mesh);if(tekaymZombieTemplate)applyTekaymZombie(mesh);const roundScale=1+Math.max(0,round-1)*.16;if(round>=4&&Math.random()<Math.min(.35,(round-2)*.025))mesh.scale.setScalar(1.08+Math.min(.12,round*.004));
  if(round>=3&&mesh.userData.parts?.torso){const torso=mesh.userData.parts.torso;const mutation=mat(round>=7?'#373b32':'#4a493c');const bone=mat('#b1aa8b');for(const side of [-1,1]){sph(torso,.055,mat('#e6a54f',.3),side*.082,.59,.232,7);if(round>=4)cyl(torso,.075,.025,.28,bone,side*.31,.25,.03,6);}if(round>=5){cube(torso,.15,.32,.08,mutation,-.24,-.12,.16);cube(torso,.12,.22,.07,mutation,.25,.08,.17);}if(round>=7){for(let k=0;k<3;k++)cyl(torso,.11,.025,.36,bone,-.2+k*.2,.38,-.08,5);sph(torso,.12,mat('#4b1715',.85),-.12,.18,.18,7);}}
  const z={mesh,floorY,verticalVelocity:0,parts:mesh.userData.parts,mixer:mesh.userData.mixer||null,actions:mesh.userData.actions||null,currentAction:null,animationState:'',x:spawn[0],z:spawn[1],type,hp:Math.round((type==='boss'?260:type==='brute'?82:type==='runner'?38:52)*roundScale),speedScale:type==='boss'?Math.max(.8,1+Math.min(.45,(round-1)*.025)-.25):1+Math.min(.45,(round-1)*.025),attackCd:.4+Math.random(),phase:Math.random()*6.28,alive:true,dying:false,deathTimer:0,deathSide:Math.random()<.5?-1:1,hitTimer:0,hitSide:1,facingYaw:Math.atan2(player.x-spawn[0],player.z-spawn[1]),id:performance.now()+Math.random(),zone,attackAnim:0,groanTimer:3+Math.random()*5};
  mesh.rotation.y=z.facingYaw;zombies.push(z);
@@ -830,6 +874,7 @@ function frame(now){
  renderer.render(scene,camera);
 }
 createWorld();makePlayer();spawnZombies();createArmoryBox();actor.visible=false;viewWeapon.visible=true;
+loadTekaymAssets();
 camera.position.set(13,1.62,11);camera.lookAt(12,1.62,11);
 requestAnimationFrame(frame);
 document.getElementById('play').addEventListener('click',resetGame);
