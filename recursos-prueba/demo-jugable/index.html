@@ -169,6 +169,13 @@ const flashlightHead=cyl(flashlightView,.095,.075,.11,M.metal,.015,-.15,-.35,12)
 const flashlightLens=cyl(flashlightView,.071,.071,.012,M.light,.015,-.15,-.412,12);flashlightLens.rotation.x=Math.PI/2;
 cube(flashlightView,.09,.035,.12,M.rust,.015,-.075,-.12);
 flashlightView.visible=false;
+// Fuerza el renderizado del equipo por delante del escenario, independientemente de las paredes.
+for(const root of [viewWeapon,flashlightView]){
+ root.scale.setScalar(1.28);
+ root.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.renderOrder=999;if(o.material){o.material=o.material.clone();o.material.depthTest=false;o.material.depthWrite=false;o.material.transparent=false;}}});
+}
+viewWeapon.position.set(.28,-.19,-.48);
+flashlightView.position.set(-.34,-.21,-.48);
 function putBench(x,z,rot=0){
  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;world.add(g);
  cube(g,2.1,.15,.65,M.wood,0,.72,0);for(const s of [-.8,.8]){cube(g,.12,.7,.12,M.rust,s,.35,-.2);cube(g,.12,.7,.12,M.rust,s,.35,.2);}
@@ -281,16 +288,25 @@ cube(world,2.7,.32,7.0,M.concrete,8.45,4.15,31.5,false);floorPlatforms.push({x:8
   for(const center of cellCenters){
    const gapStart=center-doorHalf,gapEnd=center+doorHalf;
    if(gapStart>cursor){
-    const length=gapStart-cursor;
-    cube(world,.16,1.05,length,M.bars,railX,4.8,(cursor+gapStart)/2);
-    for(let z=cursor+.35;z<gapStart-.15;z+=1.25)cube(world,.045,1,.045,M.metal,railX,4.8,z);
+    const length=gapStart-cursor,mid=(cursor+gapStart)/2;
+    cube(world,.16,1.05,length,M.bars,railX,4.8,mid);
+    colliders.push({x:railX,z:mid,hx:.18,hz:length/2,rot:0});
+    for(let z=cursor+.35;z<gapStart-.15;z+=1.25){cube(world,.045,1,.045,M.metal,railX,4.8,z);colliders.push({x:railX,z,hx:.12,hz:.12,rot:0});}
    }
    cursor=gapEnd;
   }
   if(cursor<end){
-   cube(world,.16,1.05,end-cursor,M.bars,railX,4.8,(cursor+end)/2);
-   for(let z=cursor+.35;z<end-.15;z+=1.25)cube(world,.045,1,.045,M.metal,railX,4.8,z);
+   const length=end-cursor,mid=(cursor+end)/2;
+   cube(world,.16,1.05,length,M.bars,railX,4.8,mid);
+   colliders.push({x:railX,z:mid,hx:.18,hz:length/2,rot:0});
+   for(let z=cursor+.35;z<end-.15;z+=1.25){cube(world,.045,1,.045,M.metal,railX,4.8,z);colliders.push({x:railX,z,hx:.12,hz:.12,rot:0});}
   }
+ }
+ // Cierres de borde en los extremos de las galerías, fuera de la entrada de la escalera.
+ for(const side of [-1,1])for(const z of [7,47]){
+  const edgeX=side*8.45;
+  cube(world,2.7,1.05,.16,M.bars,edgeX,4.8,z);
+  colliders.push({x:edgeX,z,hx:1.35,hz:.18,rot:0});
  }
  // Puentes de suelo sin huecos entre galería y umbrales de las celdas superiores.
  for(const side of [-1,1]){
@@ -770,8 +786,8 @@ function frame(now){
   updatePlayer(dt,now);updateZombies(dt,now);updateInteractHint();
   const isPistol=player.weapon==='pistol'&&player.pistolOwned;knifeView.visible=!isPistol;pistolView.visible=isPistol;
   const strike=attackTimer>0?Math.sin((1-attackTimer/.42)*Math.PI):0;
-  viewWeapon.position.set(.34+Math.sin(now*.004)*.006,-.20+(Math.abs(joyX)+Math.abs(joyY)>.1?Math.sin(now*.012)*.018:0),-.58);
-  flashlightView.position.set(-.37+Math.sin(now*.004+.8)*.004,-.22+(Math.abs(joyX)+Math.abs(joyY)>.1?Math.sin(now*.012+.8)*.012:0),-.58);
+  viewWeapon.position.set(.28+Math.sin(now*.004)*.006,-.19+(Math.abs(joyX)+Math.abs(joyY)>.1?Math.sin(now*.012)*.018:0),-.48);
+  flashlightView.position.set(-.34+Math.sin(now*.004+.8)*.004,-.21+(Math.abs(joyX)+Math.abs(joyY)>.1?Math.sin(now*.012+.8)*.012:0),-.48);
   viewWeapon.rotation.set(isPistol?-.04-strike*.18:-.1-strike*.78,isPistol?0:-.08+strike*.22,isPistol?-.04:-.16-strike*.38);
   for(const d of doors){const target=d.open?1:0;d.openAmount+=(target-d.openAmount)*(1-Math.exp(-5.5*dt));const travel=d.slideDistance*d.openAmount;d.mesh.position.x=d.baseX+Math.cos(d.rotation)*travel;d.mesh.position.z=d.baseZ-Math.sin(d.rotation)*travel;d.mesh.visible=!(d.open&&d.openAmount>.985);}
    for(const g of cellGates){const target=g.open?1:0;g.openAmount+=(target-g.openAmount)*(1-Math.exp(-4.8*dt));g.mesh.position.z=g.baseZ+g.slideDistance*g.openAmount;g.mesh.visible=!(g.open&&g.openAmount>.985);}
