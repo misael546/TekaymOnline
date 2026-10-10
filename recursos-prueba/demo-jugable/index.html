@@ -111,7 +111,7 @@ const M={
 const world=new THREE.Group();scene.add(world);
 // Modelo humanoide externo de Quaternius Zombie Apocalypse Kit (CC0 1.0).
 // Se carga como GLB riggeado; el fallback procedural solo se usa si falla la red.
-const ZOMBIE_MODEL_URL='https://raw.githubusercontent.com/mars-tw/storm-apocalypse/main/public/models/zombie.glb';
+const ZOMBIE_MODEL_URL='https://raw.githubusercontent.com/mars-tw/storm-apocalypse/0fcf0a80297a03a7b8da63eb4a2be33138a8d58c/public/models/zombie.glb';
 const zombieAssetLoader=new GLTFLoader();
 let zombieAsset=null,zombieAssetReady=false,zombieAssetFailed=false;
 function loadZombieAsset(){
