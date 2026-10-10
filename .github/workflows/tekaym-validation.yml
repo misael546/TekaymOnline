@@ -44,12 +44,14 @@ jobs:
           node - <<'NODE'
           const fs = require('fs');
           const html = fs.readFileSync('recursos-prueba/demo-jugable/index.html', 'utf8');
-          const script = html.match(/<script type="module">([\\s\\S]*?)<\\/script>/);
-          if (!script) throw new Error('Playable demo module not found');
+          const openTag = '<script type="module">';
+          const start = html.indexOf(openTag);
+          const end = html.indexOf('</script>', start + openTag.length);
+          if (start < 0 || end < 0) throw new Error('Playable demo module not found');
           for (const id of ['play','attackButton','stickBase','cameraToggle','map']) {
             if (!html.includes('id="' + id + '"')) throw new Error('Demo control missing: ' + id);
           }
-          fs.writeFileSync('/tmp/tekaym-demo.mjs', script[1]);
+          fs.writeFileSync('/tmp/tekaym-demo.mjs', html.slice(start + openTag.length, end));
           console.log('Playable demo structure OK');
           NODE
           node --check /tmp/tekaym-demo.mjs
