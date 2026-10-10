@@ -146,15 +146,29 @@ function solid(x,z,w,d,h,material,rot=0){
  const c={x,z,hx:w/2,hz:d/2,rot};colliders.push(c);return o;
 }
 function floor(x,z,w,d,material=M.ground,y=-.1){cube(world,w,.18,d,material,x,y,z,false);floorPlatforms.push({x,z,hx:w/2,hz:d/2,top:y+.09});}
-const viewWeapon=new THREE.Group();viewWeapon.position.set(.34,-.31,-.66);camera.add(viewWeapon);
+// Arma de la mano derecha, colocada dentro del encuadre y con mano/antebrazo visibles.
+const viewWeapon=new THREE.Group();viewWeapon.position.set(.34,-.20,-.58);camera.add(viewWeapon);
+const weaponArm=cube(viewWeapon,.145,.40,.16,mat('#4b5149'),-.015,-.035,.17);weaponArm.rotation.z=-.24;
+cube(viewWeapon,.15,.15,.14,mat('#b78c6a'),-.005,-.205,.055);
 const knifeView=new THREE.Group();viewWeapon.add(knifeView);
-cube(knifeView,.16,.32,.13,M.wood,.02,-.13,.02);cube(knifeView,.12,.13,.12,mat('#b78c6a'),.02,-.31,.005);
-const knifeBlade=cube(knifeView,.065,.31,.035,M.steel,.02,-.51,-.04);knifeBlade.rotation.z=-.13;cube(knifeView,.19,.045,.07,M.black,.02,-.36,.01);
+cube(knifeView,.14,.28,.13,M.wood,.015,-.12,.02);
+cube(knifeView,.12,.13,.12,mat('#b78c6a'),.015,-.275,.005);
+cube(knifeView,.20,.045,.07,M.black,.015,-.335,.01);
+const knifeBlade=cube(knifeView,.075,.39,.04,M.steel,.015,-.55,-.045);knifeBlade.rotation.z=-.13;
 const pistolView=new THREE.Group();viewWeapon.add(pistolView);
 cube(pistolView,.17,.13,.30,M.metal,.035,-.14,-.02);cube(pistolView,.13,.20,.12,M.black,.035,-.27,.055);
 cube(pistolView,.085,.065,.32,M.steel,.035,-.105,-.24);cube(pistolView,.055,.06,.13,M.black,.035,-.105,-.46);
 cube(pistolView,.105,.055,.15,mat('#181e1c'),.035,-.20,-.03);cube(pistolView,.025,.035,.035,mat('#b8a06a'),.035,-.04,-.11);
 pistolView.visible=false;knifeView.visible=true;viewWeapon.visible=false;
+// Linterna sostenida por la mano izquierda; el haz se activará al implementar la noche.
+const flashlightView=new THREE.Group();flashlightView.position.set(-.37,-.22,-.58);camera.add(flashlightView);
+const flashlightArm=cube(flashlightView,.145,.43,.16,mat('#4b5149'),.015,-.035,.18);flashlightArm.rotation.z=.20;
+cube(flashlightView,.15,.15,.14,mat('#b78c6a'),.015,-.205,.07);
+const flashlightBody=cyl(flashlightView,.065,.085,.38,M.black,.015,-.15,-.12,12);flashlightBody.rotation.x=Math.PI/2;
+const flashlightHead=cyl(flashlightView,.095,.075,.11,M.metal,.015,-.15,-.35,12);flashlightHead.rotation.x=Math.PI/2;
+const flashlightLens=cyl(flashlightView,.071,.071,.012,M.light,.015,-.15,-.412,12);flashlightLens.rotation.x=Math.PI/2;
+cube(flashlightView,.09,.035,.12,M.rust,.015,-.075,-.12);
+flashlightView.visible=false;
 function putBench(x,z,rot=0){
  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;world.add(g);
  cube(g,2.1,.15,.65,M.wood,0,.72,0);for(const s of [-.8,.8]){cube(g,.12,.7,.12,M.rust,s,.35,-.2);cube(g,.12,.7,.12,M.rust,s,.35,.2);}
@@ -260,7 +274,29 @@ cube(world,2.7,.32,13.0,M.concrete,8.45,4.15,13.25,false);floorPlatforms.push({x
 cube(world,2.7,.32,14.0,M.concrete,8.45,4.15,40,false);floorPlatforms.push({x:8.45,z:40,hx:1.35,hz:7,top:4.31});
 cube(world,2.7,.32,7.0,M.concrete,8.45,4.15,31.5,false);floorPlatforms.push({x:8.45,z:31.5,hx:1.35,hz:3.5,top:4.31});
  for(const side of [-1,1])for(const z of [11,20,29,38,46]){makeCell(side*13,z,0,side);makeCell(side*13,z,1,side);}
- for(const side of [-1,1]){cube(world,.16,1.05,41,M.bars,side*9.4,4.8,27);for(let z=7;z<=47;z+=1.25)cube(world,.045,1,.045,M.metal,side*9.4,4.8,z);}
+ // Barandales del segundo piso con entradas despejadas frente a cada celda.
+ for(const side of [-1,1]){
+  const railX=side*9.4,cellCenters=[11,20,29,38,46],start=7,end=47,doorHalf=1.3;
+  let cursor=start;
+  for(const center of cellCenters){
+   const gapStart=center-doorHalf,gapEnd=center+doorHalf;
+   if(gapStart>cursor){
+    const length=gapStart-cursor;
+    cube(world,.16,1.05,length,M.bars,railX,4.8,(cursor+gapStart)/2);
+    for(let z=cursor+.35;z<gapStart-.15;z+=1.25)cube(world,.045,1,.045,M.metal,railX,4.8,z);
+   }
+   cursor=gapEnd;
+  }
+  if(cursor<end){
+   cube(world,.16,1.05,end-cursor,M.bars,railX,4.8,(cursor+end)/2);
+   for(let z=cursor+.35;z<end-.15;z+=1.25)cube(world,.045,1,.045,M.metal,railX,4.8,z);
+  }
+ }
+ // Puentes de suelo sin huecos entre galería y umbrales de las celdas superiores.
+ for(const side of [-1,1]){
+  cube(world,1.35,.32,40,M.concrete,side*10.05,4.15,27,false);
+  floorPlatforms.push({x:side*10.05,z:27,hx:.675,hz:20,top:4.31});
+ }
  cube(world,39.2,.18,43.2,M.concrete,0,8.78,27,false);cube(world,43.4,.18,33.5,M.concrete,0,5.72,-11,false);cube(world,35.4,.18,43.4,M.concrete,40,5.72,-3,false);cube(world,35.4,.18,43.4,M.concrete,-40,5.72,-3,false);
  for(const z of [10,21,32,43]){cube(world,1.8,.12,.22,M.light,-4.5,7.9,z,false);cube(world,1.8,.12,.22,M.light,4.5,7.9,z,false);}
  // Escalera transitable: peldaños visuales sin colisionadores; la rampa lógica permite subir.
@@ -647,7 +683,7 @@ function updatePlayer(dt,t){
 }
 function updateZombies(dt,t){
  if(!running||paused||ended)return;
- if(openingSequence>0){wakeElapsed+=dt;if(!alarmPlayed&&wakeElapsed>=.55){playSfx('alarm');alarmPlayed=true;}if(!wakeScream1&&wakeElapsed>=.8){playScream(-.72);wakeScream1=true;}if(!wakeScream2&&wakeElapsed>=2.65){playScream(.7);wakeScream2=true;}const caption=document.getElementById('wakeCaption'),fade=document.getElementById('wakeFade');if(caption){caption.textContent=wakeElapsed<2.2?'... DESPERTANDO EN LA CELDA ...':wakeElapsed<4.8?'¡GRITOS EN EL BLOQUE!':'TODAS LAS CELDAS ESTÁN ABIERTAS';caption.style.opacity=wakeElapsed>7.2?'0':'1';}if(fade)fade.style.opacity=wakeElapsed<.35?String(1-wakeElapsed/.35):'0';openingSequence=Math.max(0,openingSequence-dt);if(openingSequence<=0&&!roundHasStarted){for(const g of cellGates){g.open=true;g.openAmount=1;g.mesh.rotation.y=g.side*1.25;}document.getElementById('wakeCaption').style.opacity='0';document.getElementById('wakeFade').style.opacity='0';document.getElementById('hud').style.display='block';document.getElementById('controls').style.display='block';document.getElementById('moveDiag').style.display='block';cameraYaw=-Math.PI/2;cameraPitch=.03;viewWeapon.visible=true;beginRound(1);}}
+ if(openingSequence>0){wakeElapsed+=dt;if(!alarmPlayed&&wakeElapsed>=.55){playSfx('alarm');alarmPlayed=true;}if(!wakeScream1&&wakeElapsed>=.8){playScream(-.72);wakeScream1=true;}if(!wakeScream2&&wakeElapsed>=2.65){playScream(.7);wakeScream2=true;}const caption=document.getElementById('wakeCaption'),fade=document.getElementById('wakeFade');if(caption){caption.textContent=wakeElapsed<2.2?'... DESPERTANDO EN LA CELDA ...':wakeElapsed<4.8?'¡GRITOS EN EL BLOQUE!':'TODAS LAS CELDAS ESTÁN ABIERTAS';caption.style.opacity=wakeElapsed>7.2?'0':'1';}if(fade)fade.style.opacity=wakeElapsed<.35?String(1-wakeElapsed/.35):'0';openingSequence=Math.max(0,openingSequence-dt);if(openingSequence<=0&&!roundHasStarted){for(const g of cellGates){g.open=true;g.openAmount=1;g.mesh.rotation.y=g.side*1.25;}document.getElementById('wakeCaption').style.opacity='0';document.getElementById('wakeFade').style.opacity='0';document.getElementById('hud').style.display='block';document.getElementById('controls').style.display='block';document.getElementById('moveDiag').style.display='block';cameraYaw=-Math.PI/2;cameraPitch=.03;viewWeapon.visible=true;flashlightView.visible=true;beginRound(1);}}
  if(roundHasStarted&&waveToSpawn>0){spawnClock-=dt;if(spawnClock<=0){const zones=accessibleZones();const zone=zones[Math.floor(Math.random()*zones.length)]||'cells';spawnOneZombie(zone);waveToSpawn--;spawnClock=Math.max(.5,1.2-round*.018);updateHud();}}
  const active=zombies.filter(z=>z.alive).length;
  if(roundHasStarted&&openingSequence<=0&&waveToSpawn===0&&active===0){if(intermission<=0)intermission=4;else{intermission-=dt;if(intermission<=0)beginRound(round+1);}}
@@ -713,7 +749,7 @@ function updateZombies(dt,t){
   }
  }
 }
-function updateCamera(dt){if(!actor)return;let rise=1;if(openingSequence>0){const t=Math.max(0,Math.min(1,(wakeElapsed-2.1)/3.6));rise=t*t*(3-2*t);cameraYaw=(-Math.PI/2)*rise;}const camY=(openingSequence>0?.96+.66*rise:1.62)+player.y;const pitch=openingSequence>0?-.035*(1-rise)+.03*rise:cameraPitch;const desired=new THREE.Vector3(player.x,camY,player.z);camera.position.lerp(desired,1-Math.exp(-24*dt));const look=new THREE.Vector3(Math.sin(cameraYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(cameraYaw)*Math.cos(pitch));camera.lookAt(desired.clone().add(look));actor.visible=false;viewWeapon.visible=openingSequence<=0;}
+function updateCamera(dt){if(!actor)return;let rise=1;if(openingSequence>0){const t=Math.max(0,Math.min(1,(wakeElapsed-2.1)/3.6));rise=t*t*(3-2*t);cameraYaw=(-Math.PI/2)*rise;}const camY=(openingSequence>0?.96+.66*rise:1.62)+player.y;const pitch=openingSequence>0?-.035*(1-rise)+.03*rise:cameraPitch;const desired=new THREE.Vector3(player.x,camY,player.z);camera.position.lerp(desired,1-Math.exp(-24*dt));const look=new THREE.Vector3(Math.sin(cameraYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(cameraYaw)*Math.cos(pitch));camera.lookAt(desired.clone().add(look));actor.visible=false;viewWeapon.visible=openingSequence<=0;flashlightView.visible=openingSequence<=0;}
 function updateInteractHint(){
  const button=document.getElementById('interactButton');
  if(!button)return;
@@ -734,7 +770,8 @@ function frame(now){
   updatePlayer(dt,now);updateZombies(dt,now);updateInteractHint();
   const isPistol=player.weapon==='pistol'&&player.pistolOwned;knifeView.visible=!isPistol;pistolView.visible=isPistol;
   const strike=attackTimer>0?Math.sin((1-attackTimer/.42)*Math.PI):0;
-  viewWeapon.position.set(.34+Math.sin(now*.004)*.006,-.31+(Math.abs(joyX)+Math.abs(joyY)>.1?Math.sin(now*.012)*.018:0),-.66);
+  viewWeapon.position.set(.34+Math.sin(now*.004)*.006,-.20+(Math.abs(joyX)+Math.abs(joyY)>.1?Math.sin(now*.012)*.018:0),-.58);
+  flashlightView.position.set(-.37+Math.sin(now*.004+.8)*.004,-.22+(Math.abs(joyX)+Math.abs(joyY)>.1?Math.sin(now*.012+.8)*.012:0),-.58);
   viewWeapon.rotation.set(isPistol?-.04-strike*.18:-.1-strike*.78,isPistol?0:-.08+strike*.22,isPistol?-.04:-.16-strike*.38);
   for(const d of doors){const target=d.open?1:0;d.openAmount+=(target-d.openAmount)*(1-Math.exp(-5.5*dt));const travel=d.slideDistance*d.openAmount;d.mesh.position.x=d.baseX+Math.cos(d.rotation)*travel;d.mesh.position.z=d.baseZ-Math.sin(d.rotation)*travel;d.mesh.visible=!(d.open&&d.openAmount>.985);}
    for(const g of cellGates){const target=g.open?1:0;g.openAmount+=(target-g.openAmount)*(1-Math.exp(-4.8*dt));g.mesh.position.z=g.baseZ+g.slideDistance*g.openAmount;g.mesh.visible=!(g.open&&g.openAmount>.985);}
