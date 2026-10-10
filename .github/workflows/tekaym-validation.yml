@@ -61,6 +61,25 @@ jobs:
           }
           NODE
           node --check /tmp/tekaym-playable.mjs
+      - name: Validate playable demo spawn and wake-up camera
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('recursos-prueba/demo-jugable/index.html', 'utf8');
+          if (!html.includes('player.x=13.35;player.z=11.35;')) throw new Error('Spawn point changed unexpectedly');
+          if (!html.includes('camera.position.set(player.x,.96,player.z)')) throw new Error('Intro camera is not reset at the spawn');
+          if (!html.includes('cameraYaw=(-Math.PI/2)*rise')) throw new Error('Intro must begin facing inside the cell and turn toward the gate');
+          if (!html.includes('const camY=openingSequence>0?.96+.66*rise:1.62')) throw new Error('Intro camera height regression');
+          if (!html.includes('const pitch=openingSequence>0?-.035*(1-rise)+.03*rise:cameraPitch')) throw new Error('Intro camera pitch regression');
+          if (!html.includes('openingSequence=8.0;roundHasStarted=false;')) throw new Error('Wake-up sequence duration regression');
+          if (!html.includes('const delay=ownCell?6.1:1.6+(g.sequenceIndex%9)*.34;')) throw new Error('Cell gate opening sequence regression');
+          if (!html.includes('if(c.cellRef&&c.cellRef.open)continue;')) throw new Error('Opened cell gate collision handling missing');
+          const x = 13.35, z = 11.35, cx = 13, cz = 11, halfW = 5.15 / 2, halfD = 6.4 / 2, radius = .34;
+          if (x <= cx-halfW+radius || x >= cx+halfW-radius || z <= cz-halfD+radius || z >= cz+halfD-radius) {
+            throw new Error('Spawn point is not safely inside the player cell');
+          }
+          console.log('Playable demo spawn, camera, and gate regression checks passed');
+          NODE
           node --check /tmp/tekaym-animation-lab.mjs
       - name: Check isolation
         run: |
