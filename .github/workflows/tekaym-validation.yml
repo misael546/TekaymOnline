@@ -39,22 +39,29 @@ jobs:
           test -f worker/wrangler.jsonc
           test -f firestore.rules
           echo 'Tekaym structure OK'
-      - name: Validate offline playable demo JavaScript
+      - name: Validate isolated demo modules
         run: |
           node - <<'NODE'
           const fs = require('fs');
-          const html = fs.readFileSync('recursos-prueba/demo-jugable/index.html', 'utf8');
-          const openTag = '<script type="module">';
-          const start = html.indexOf(openTag);
-          const end = html.indexOf('</script>', start + openTag.length);
-          if (start < 0 || end < 0) throw new Error('Playable demo module not found');
-          for (const id of ['play','attackButton','stickBase','cameraToggle','map']) {
-            if (!html.includes('id="' + id + '"')) throw new Error('Demo control missing: ' + id);
+          const demos = [
+            {file:'recursos-prueba/demo-jugable/index.html', output:'/tmp/tekaym-playable.mjs', label:'playable', ids:['play','attackButton','stickBase','cameraToggle','map']},
+            {file:'recursos-prueba/demo-animaciones/index.html', output:'/tmp/tekaym-animation-lab.mjs', label:'animation lab', ids:['character','environment','speed','front','side']}
+          ];
+          for (const demo of demos) {
+            const html = fs.readFileSync(demo.file, 'utf8');
+            const tag = '<script type="module">';
+            const start = html.indexOf(tag);
+            const end = html.indexOf('</script>', start + tag.length);
+            if (start < 0 || end < 0) throw new Error('Module not found: ' + demo.label);
+            for (const id of demo.ids) {
+              if (!html.includes('id="' + id + '"')) throw new Error('Missing '+demo.label+' control: '+id);
+            }
+            fs.writeFileSync(demo.output, html.slice(start + tag.length, end));
+            console.log('Structure OK: '+demo.label);
           }
-          fs.writeFileSync('/tmp/tekaym-demo.mjs', html.slice(start + openTag.length, end));
-          console.log('Playable demo structure OK');
           NODE
-          node --check /tmp/tekaym-demo.mjs
+          node --check /tmp/tekaym-playable.mjs
+          node --check /tmp/tekaym-animation-lab.mjs
       - name: Check isolation
         run: |
           if git grep -nE 'DarkPixel|neon_core|neon_release|neon_force|neon_reload|serverVersion|SERVER_VERSION|Belmo' -- ':!README.md' ':!docs/**' ':!recursos-prueba/**' ':!.github/workflows/tekaym-validation.yml'; then
