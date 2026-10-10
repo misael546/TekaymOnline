@@ -108,6 +108,23 @@ const M={
  crate:mat('#87734e'),black:mat('#252a27'),light:mat('#e1d8b4',.4),red:mat('#8b3b32'),
  steel:mat('#abb8b5',.4,.75),grass:mat('#596149'),white:mat('#b8bfaf')
 };
+
+function makeGrimeTexture(base='#b8b6ac',dark='#62645d',light='#ded9c9'){
+ const c=document.createElement('canvas');c.width=256;c.height=256;const ctx=c.getContext('2d');
+ ctx.fillStyle=base;ctx.fillRect(0,0,256,256);
+ for(let i=0;i<2600;i++){const x=Math.random()*256,y=Math.random()*256,r=Math.random()*1.8+.25;ctx.globalAlpha=.035+Math.random()*.16;ctx.fillStyle=Math.random()>.45?dark:light;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+ ctx.globalAlpha=.16;ctx.strokeStyle=dark;ctx.lineWidth=1;
+ for(let i=0;i<22;i++){const x=Math.random()*256,y=Math.random()*256;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.random()*22-11,y+Math.random()*8-4);ctx.stroke();}
+ ctx.globalAlpha=.22;ctx.strokeStyle=dark;ctx.lineWidth=2;ctx.strokeRect(1,1,254,254);ctx.globalAlpha=1;
+ const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(3,3);tex.anisotropy=4;return tex;
+}
+M.ground.map=makeGrimeTexture('#a5a497','#3f453d','#d0cbb9');
+M.road.map=makeGrimeTexture('#9b9c92','#393e39','#c0bbae');
+M.concrete.map=makeGrimeTexture('#b6b6aa','#555951','#d9d3c4');
+M.wall.map=makeGrimeTexture('#c0bfb3','#68695f','#e0d9c9');
+M.metal.map=makeGrimeTexture('#a5aaa2','#444c47','#d2d4c9');
+M.crate.map=makeGrimeTexture('#b2a07b','#534431','#d2c39d');
+
 const world=new THREE.Group();scene.add(world);
 // Infectados procedurales del propio demo; escala anclada al suelo, sin rigs externos flotantes.
 const colliders=[],zombies=[],loot=[],doors=[],flickerLights=[],cellGates=[];
@@ -469,17 +486,24 @@ function firePistol(){
  const geo=new THREE.BufferGeometry().setFromPoints([start,end]);const beam=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffd88a,transparent:true,opacity:.95}));scene.add(beam);fxEffects.push({object:beam,life:.075});
  const flash=new THREE.PointLight(0xffb54e,2.4,5,2);flash.position.copy(start);scene.add(flash);fxEffects.push({object:flash,life:.045,light:true});
  if(target){
-  target.hp-=25;target.hitTimer=.22;target.hitSide=Math.sign(target.x-player.x)||1;
+  target.hp-=25;spawnHitSparks(target.x,1.15,target.z);target.hitTimer=.22;target.hitSide=Math.sign(target.x-player.x)||1;
   const dx=target.x-player.x;playSfx('hit',Math.max(-1,Math.min(1,dx/12)));
   if(target.hp<=0){target.alive=false;target.dying=true;target.deathTimer=0;target.deathSide=(Math.sign(dx)||1)*.8;killCount++;roundKills++;points+=100;playSfx('death',Math.max(-1,Math.min(1,dx/12)));message('Impacto confirmado · +100 puntos',900);}
  }else message('Disparo fallido.',500);
  updateHud();
 }
+function spawnSlashEffect(){
+ const pts=[];const yaw=cameraYaw;for(let i=0;i<=18;i++){const a=-1.05+i/18*2.1;const r=1.35;pts.push(new THREE.Vector3(player.x+Math.sin(yaw+a)*r,1.02+Math.sin(i/18*Math.PI)*.14,player.z-Math.cos(yaw+a)*r));}
+ const geo=new THREE.BufferGeometry().setFromPoints(pts);const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xe7edcf,transparent:true,opacity:.9}));scene.add(line);fxEffects.push({object:line,life:.13});
+}
+function spawnHitSparks(x,y,z){
+ for(let i=0;i<5;i++){const mesh=new THREE.Mesh(new THREE.SphereGeometry(.035+Math.random()*.025,5,5),new THREE.MeshBasicMaterial({color:i%2?'#d9b56c':'#a64d3d',transparent:true,opacity:.95}));mesh.position.set(x+(Math.random()-.5)*.25,y+Math.random()*.35,z+(Math.random()-.5)*.25);scene.add(mesh);fxEffects.push({object:mesh,life:.18+Math.random()*.12,velocity:new THREE.Vector3((Math.random()-.5)*2,.6+Math.random()*1.5,(Math.random()-.5)*2)});}
+}
 function attack(){
  if(!running||paused||ended||player.dead||attackCooldown>0)return;
  if(player.weapon==='pistol'&&player.pistolOwned){firePistol();return;}
  player.yaw=cameraYaw;if(actor)actor.rotation.y=player.yaw+Math.PI;
- attackCooldown=.48;attackTimer=.42;playSfx('knife');
+ attackCooldown=.48;attackTimer=.42;playSfx('knife');spawnSlashEffect();
  if(parts)parts.armR.rotation.x=-1.0;
  const fx=Math.sin(player.yaw),fz=-Math.cos(player.yaw);
  let hitCount=0;
@@ -489,7 +513,7 @@ function attack(){
   if(dist>2.55||dist<.001)continue;
   const dot=(dx/dist)*fx+(dz/dist)*fz;
   if(dot<.3)continue;
-  z.hp-=Math.round((z.type==='brute'?23:34)*(1+Math.min(.25,(round-1)*.015)));hitCount++;z.hitTimer=.22;z.hitSide=Math.sign(dx)||1;playSfx('hit',Math.max(-1,Math.min(1,dx/12)));
+  z.hp-=Math.round((z.type==='brute'?23:34)*(1+Math.min(.25,(round-1)*.015)));spawnHitSparks(z.x,1.15,z.z);hitCount++;z.hitTimer=.22;z.hitSide=Math.sign(dx)||1;playSfx('hit',Math.max(-1,Math.min(1,dx/12)));
   z.mesh.position.x+=dx/dist*.25;z.mesh.position.z+=dz/dist*.25;z.x=z.mesh.position.x;z.z=z.mesh.position.z;
   if(z.hp<=0){
    z.alive=false;z.dying=true;z.deathTimer=0;z.deathSide=(Math.sign(dx)||1)*.8;killCount++;roundKills++;points+=100;
@@ -636,6 +660,7 @@ function updateInteractHint(){
  if(!running||paused||ended||openingSequence>0){button.style.display='none';return;}
  let nearDoor=null,doorDistance=3.2;
  for(const d of doors){if(d.open)continue;const distance=Math.hypot(d.x-player.x,d.z-player.z);if(distance<doorDistance){nearDoor=d;doorDistance=distance;}}
+ if(armoryBox&&Math.hypot(armoryBox.x-player.x,armoryBox.z-player.z)<3.2){button.textContent=player.pistolOwned?'CAMBIAR ARMA':'COMPRAR PISTOLA · 250';button.style.display='block';return;}
  if(nearDoor){button.textContent=points>=nearDoor.price?'ABRIR':'ABRIR · '+nearDoor.price;button.style.display='block';return;}
  let nearLoot=false;
  for(const item of loot){if(item.available&&Math.hypot(item.x-player.x,item.z-player.z)<2.6){nearLoot=true;break;}}
@@ -644,7 +669,7 @@ function updateInteractHint(){
 function frame(now){
  requestAnimationFrame(frame);const dt=Math.min(.04,(now-lastTime)/1000||0);lastTime=now;
  if(armoryBox){armoryBox.phase+=dt;armoryBox.ring.rotation.z=armoryBox.phase*.6;armoryBox.beacon.intensity=1.1+Math.sin(armoryBox.phase*3)*.35;}
- for(let i=fxEffects.length-1;i>=0;i--){const e=fxEffects[i];e.life-=dt;if(e.life<=0){scene.remove(e.object);if(e.object.geometry)e.object.geometry.dispose();if(e.object.material)e.object.material.dispose?.();fxEffects.splice(i,1);}}
+ for(let i=fxEffects.length-1;i>=0;i--){const e=fxEffects[i];e.life-=dt;if(e.velocity){e.object.position.addScaledVector(e.velocity,dt);e.velocity.y-=2.8*dt;}if(e.object.material&&'opacity' in e.object.material)e.object.material.opacity=Math.max(0,Math.min(1,e.life/.22));if(e.life<=0){scene.remove(e.object);if(e.object.geometry)e.object.geometry.dispose();if(e.object.material)e.object.material.dispose?.();fxEffects.splice(i,1);}}
  if(running&&!paused){
   updatePlayer(dt,now);updateZombies(dt,now);updateInteractHint();
   for(const d of doors){const target=d.open?1:0;d.openAmount+=(target-d.openAmount)*(1-Math.exp(-5.5*dt));d.mesh.rotation.y=d.rotation+Math.PI*.48*d.openAmount;}
