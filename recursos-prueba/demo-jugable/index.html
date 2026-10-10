@@ -266,7 +266,7 @@ function makeCell(cx,cz,level,side){
 }
 
 const tekaymAssetBase=new URL('../modelos-3d/',import.meta.url).href;
-let tekaymZombieTemplate=null,tekaymDoorTemplate=null,tekaymBunkTemplate=null;
+let tekaymZombieTemplate=null,tekaymDoorTemplate=null,tekaymBunkTemplate=null,tekaymKnifeTemplate=null;
 function prepTekaymModel(root){
  root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;o.material.needsUpdate=true;}}});
  return root;
@@ -298,6 +298,14 @@ function replaceTekaymBunks(){
   anchor.add(model);anchor.userData.tekaymBunkApplied=true;
  });
 }
+function replaceTekaymKnife(){
+ if(!tekaymKnifeTemplate)return;
+ for(const child of [...knifeView.children])child.visible=false;
+ if(knifeView.userData.tekaymKnifeApplied)return;
+ const model=prepTekaymModel(tekaymKnifeTemplate.clone(true));
+ model.scale.setScalar(.43);model.rotation.z=Math.PI;model.position.set(.015,-.18,0);
+ knifeView.add(model);knifeView.userData.tekaymKnifeApplied=true;
+}
 function loadTekaymAssets(){
  const statusMessage=(text)=>{const el=document.getElementById('message');if(el&&typeof message==='function')message(text,3500);};
  const mtlLoader=new MTLLoader();mtlLoader.setPath(tekaymAssetBase);
@@ -308,6 +316,7 @@ function loadTekaymAssets(){
   load('zombie-prisionero.obj',model=>{tekaymZombieTemplate=model;for(const z of zombies)applyTekaymZombie(z.mesh);});
   load('puerta-celda.obj',model=>{tekaymDoorTemplate=model;replaceTekaymCellDoors();});
   load('litera-prision.obj',model=>{tekaymBunkTemplate=model;replaceTekaymBunks();});
+  load('cuchillo-supervivencia.obj',model=>{tekaymKnifeTemplate=model;replaceTekaymKnife();});
  },undefined,err=>console.warn('[Tekaym 3D] No se pudieron cargar materiales; se mantienen modelos de respaldo',err));
 }
 
