@@ -413,8 +413,8 @@ function resetGame(){
  initAudio();
  zombies.forEach(z=>{world.remove(z.mesh);disposeGroup(z.mesh);});zombies.length=0;
  for(let i=loot.length-1;i>=0;i--){const l=loot[i];if(l.drop){world.remove(l.mesh);disposeGroup(l.mesh);loot.splice(i,1);}else{l.available=true;l.mesh.visible=true;}}
- if(actor){world.remove(actor);disposeGroup(actor);}player.x=13.35;player.z=11.65;player.yaw=-Math.PI/2;player.hp=100;player.stamina=100;player.hunger=100;player.thirst=100;player.dead=false;player.supplies=0;player.time=0;
- killCount=0;round=1;points=500;waveToSpawn=0;spawnClock=0;intermission=0;roundKills=0;openingSequence=2.7;roundHasStarted=false;stepTimer=0;alarmPlayed=false;cellGates.forEach(g=>{g.open=false;g.openAmount=0;g.mesh.rotation.y=0;});const exitGate=cellGates.find(g=>g.level===0&&g.side===1&&Math.abs(g.z-11)<1);if(exitGate)exitGate.open=true;doors.forEach(d=>{d.open=false;d.openAmount=0;d.mesh.rotation.y=d.rotation;d.mesh.visible=true;});attackTimer=0;attackCooldown=0;playerHitTimer=0;runningTouch=false;paused=false;ended=false;cameraYaw=-Math.PI/2;cameraPitch=.03;viewWeapon.visible=true;
+ if(actor){world.remove(actor);disposeGroup(actor);}player.x=13;player.z=11;player.yaw=-Math.PI/2;player.hp=100;player.stamina=100;player.hunger=100;player.thirst=100;player.dead=false;player.supplies=0;player.time=0;
+ killCount=0;round=1;points=500;waveToSpawn=0;spawnClock=0;intermission=0;roundKills=0;openingSequence=2.7;roundHasStarted=false;stepTimer=0;alarmPlayed=false;cellGates.forEach(g=>{g.open=false;g.openAmount=0;g.mesh.rotation.y=0;});const exitGate=cellGates.find(g=>g.level===0&&g.side===1&&Math.abs(g.z-11)<1);if(exitGate){exitGate.open=true;exitGate.openAmount=1;exitGate.mesh.rotation.y=exitGate.side*1.25;}doors.forEach(d=>{d.open=false;d.openAmount=0;d.mesh.rotation.y=d.rotation;d.mesh.visible=true;});attackTimer=0;attackCooldown=0;playerHitTimer=0;runningTouch=false;paused=false;ended=false;cameraYaw=-Math.PI/2;cameraPitch=.03;viewWeapon.visible=true;
  makePlayer();spawnZombies();updateHud();document.getElementById('ending').style.display='none';document.getElementById('start').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('controls').style.display='block';running=true;message('RONDA 1 · Se activa la alarma. Las celdas se abrirán en unos segundos…',4200);
 }
 function initAudio(){if(audioReady)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ambientAudio=new AC();audioMaster=ambientAudio.createGain();audioMaster.gain.value=.62;audioMaster.connect(ambientAudio.destination);const drone=ambientAudio.createOscillator(),dg=ambientAudio.createGain(),df=ambientAudio.createBiquadFilter();drone.type='triangle';drone.frequency.value=43;df.type='lowpass';df.frequency.value=180;dg.gain.value=.12;drone.connect(df);df.connect(dg);dg.connect(audioMaster);drone.start();const hum=ambientAudio.createOscillator(),hg=ambientAudio.createGain();hum.type='sine';hum.frequency.value=57;hg.gain.value=.045;hum.connect(hg);hg.connect(audioMaster);hum.start();const buffer=ambientAudio.createBuffer(1,ambientAudio.sampleRate*2,ambientAudio.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.35;const wind=ambientAudio.createBufferSource(),wf=ambientAudio.createBiquadFilter(),wg=ambientAudio.createGain();wind.buffer=buffer;wind.loop=true;wf.type='lowpass';wf.frequency.value=390;wg.gain.value=.055;wind.connect(wf);wf.connect(wg);wg.connect(audioMaster);wind.start();audioReady=true;if(ambientAudio.state==='suspended')ambientAudio.resume();}
@@ -492,6 +492,7 @@ function updatePlayer(dt,t){
  let ix=(keysRt?1:0)-(keysLf?1:0)+joyX,iy=(keysDn?1:0)-(keysUp?1:0)+joyY;
  ix=Math.max(-1,Math.min(1,ix));iy=Math.max(-1,Math.min(1,iy));
  const len=Math.hypot(ix,iy);if(len>1){ix/=len;iy/=len;}
+ if(Math.abs(ix)<.07)ix=0;if(Math.abs(iy)<.07)iy=0;
  const sprint=(keys.ShiftLeft||keys.ShiftRight||runningTouch)&&len>.05&&player.stamina>1;
  const speed=sprint?7.0:4.55;
   if(len>.08){stepTimer-=dt;if(stepTimer<=0){playSfx('step',Math.max(-1,Math.min(1,player.x/58)));stepTimer=sprint?.27:.43;}}else stepTimer=0;
@@ -499,8 +500,11 @@ function updatePlayer(dt,t){
  if(len>.08){
   const fx=Math.sin(cameraYaw),fz=-Math.cos(cameraYaw),rx=Math.cos(cameraYaw),rz=Math.sin(cameraYaw);
   const mx=(fx*(-iy)+rx*ix)*speed*dt,mz=(fz*(-iy)+rz*ix)*speed*dt;
-  if(!collide(player.x+mx,player.z,.4))player.x+=mx;
-  if(!collide(player.x,player.z+mz,.4))player.z+=mz;
+  const nextX=player.x+mx,nextZ=player.z+mz;
+  const canX=!collide(nextX,player.z,.4),canZ=!collide(player.x,nextZ,.4);
+  if(canX)player.x=nextX;
+  if(canZ)player.z=nextZ;
+  if(!canX&&!canZ&&Math.abs(player.x-13)<.65&&Math.abs(player.z-11)<.65){player.x=13;player.z=11;}
   player.yaw=Math.atan2(mx,mz);if(actor)actor.rotation.y=player.yaw;
  }
  player.time+=dt;player.hunger=Math.max(0,player.hunger-.045*dt);player.thirst=Math.max(0,player.thirst-.065*dt);
@@ -622,7 +626,7 @@ function frame(now){
  renderer.render(scene,camera);
 }
 createWorld();makePlayer();spawnZombies();actor.visible=false;viewWeapon.visible=true;
-camera.position.set(13.35,1.62,11.65);camera.lookAt(12.35,1.62,11.65);
+camera.position.set(13,1.62,11);camera.lookAt(12,1.62,11);
 requestAnimationFrame(frame);
 document.getElementById('play').addEventListener('click',resetGame);
 document.getElementById('again').addEventListener('click',resetGame);
@@ -647,7 +651,7 @@ base.addEventListener('pointerdown',e=>{e.preventDefault();stickId=e.pointerId;b
 function moveStick(e){const r=base.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy),max=37;if(d>max){dx=dx/d*max;dy=dy/d*max;}joyX=dx/max;joyY=dy/max;knob.style.transform='translate('+dx+'px,'+dy+'px)';}
 base.addEventListener('pointermove',e=>{if(e.pointerId===stickId)moveStick(e);});
 function resetStick(){stickId=null;joyX=0;joyY=0;knob.style.transform='translate(0,0)';}
-base.addEventListener('pointerup',resetStick);base.addEventListener('pointercancel',resetStick);
+base.addEventListener('pointerup',resetStick);base.addEventListener('pointercancel',resetStick);base.addEventListener('lostpointercapture',resetStick);
 canvas.addEventListener('pointerdown',e=>{if(!running||paused)return;lookPointer=e.pointerId;lastPX=e.clientX;lastPY=e.clientY;lookStartX=e.clientX;lookStartY=e.clientY;canvas.setPointerCapture(e.pointerId);});
 canvas.addEventListener('pointermove',e=>{if(lookPointer!==e.pointerId)return;const dx=e.clientX-lastPX,dy=e.clientY-lastPY;lastPX=e.clientX;lastPY=e.clientY;cameraYaw+=dx*.0055;cameraPitch=Math.max(-.4,Math.min(.65,cameraPitch-dy*.003));});
 function releaseLook(e){if(lookPointer!==e.pointerId)return;const moved=Math.abs(e.clientX-lookStartX)+Math.abs(e.clientY-lookStartY);lookPointer=null;if(e.pointerType==='mouse'&&moved<6)attack();}
