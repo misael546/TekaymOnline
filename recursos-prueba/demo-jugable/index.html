@@ -12,7 +12,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 .panel{background:rgba(9,14,15,.88);border:1px solid #3b4540;border-radius:12px;box-shadow:0 8px 24px #0005;backdrop-filter:blur(8px)}
 #hud{position:fixed;inset:0;z-index:3;pointer-events:none;display:none}
 #stats{position:absolute;left:10px;top:10px;width:min(238px,calc(100vw - 20px));padding:10px;display:grid;grid-template-columns:1fr;gap:8px}
-.meter{min-width:0}.meter label{display:flex;justify-content:space-between;gap:6px;font-size:10px;letter-spacing:.3px;color:#bec8be;font-weight:800;margin-bottom:5px}.track{height:7px;background:#252d29;border-radius:6px;overflow:hidden}.fill{height:100%;width:100%;background:#8fc37b;transition:width .12s}.hp{background:#ce6b5e}#compactCounters{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:900;letter-spacing:.3px;color:#d8dfd3}#compactCounters b{color:#f4d37d;font-variant-numeric:tabular-nums}
+.meter{min-width:0}.meter label{display:flex;justify-content:space-between;gap:6px;font-size:10px;letter-spacing:.3px;color:#bec8be;font-weight:800;margin-bottom:5px}.track{height:7px;background:#252d29;border-radius:6px;overflow:hidden}.fill{height:100%;width:100%;background:#8fc37b;transition:width .12s}.hp{background:#ce6b5e}#compactCounters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;font-size:9px;font-weight:900;letter-spacing:.2px;color:#d8dfd3}#compactCounters span{white-space:nowrap}#compactCounters b{color:#f4d37d;font-variant-numeric:tabular-nums}
 #objective{display:none!important}
 #rightHud{display:none!important}
 #counter{display:none!important}
@@ -57,7 +57,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100%;height:100%;touch-ac
 <div id="hud">
  <div id="stats" class="panel">
   <div class="meter"><label><span>VIDA</span><span id="hpVal">100</span></label><div class="track"><div id="hpFill" class="fill hp"></div></div></div>
-  <div id="compactCounters" aria-label="Marcadores de partida"><span>INFECTADOS <b id="kills">0</b></span><span>ORO <b id="points">500</b></span></div>
+  <div id="compactCounters" aria-label="Marcadores de partida"><span>INFECTADOS <b id="kills">0</b></span><span>PUNTOS <b id="points">500</b></span><span>RONDA <b id="roundVal">1</b></span></div>
  </div>
  <div id="crosshair">+</div><div id="message" class="panel"></div>
 </div>
@@ -482,9 +482,10 @@ function updateHud(){
  const hpVal=document.getElementById('hpVal'),hpFill=document.getElementById('hpFill');
  if(hpVal)hpVal.textContent=Math.ceil(player.hp);
  if(hpFill)hpFill.style.width=Math.max(0,Math.min(100,player.hp))+'%';
- const zombieCounter=document.getElementById('kills'),goldCounter=document.getElementById('points');
+ const zombieCounter=document.getElementById('kills'),pointsCounter=document.getElementById('points'),roundCounter=document.getElementById('roundVal');
  if(zombieCounter)zombieCounter.textContent=zombies.filter(z=>z.alive).length+waveToSpawn;
- if(goldCounter)goldCounter.textContent=points;
+ if(pointsCounter)pointsCounter.textContent=points;
+ if(roundCounter)roundCounter.textContent=round;
 }
 function updatePlayer(dt,t){
  if(!running||paused||ended||openingSequence>0)return;
